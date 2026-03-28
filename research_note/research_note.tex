@@ -1,22 +1,213 @@
 \documentclass[modern]{desc-tex/styles/lsstdescnote}
 
+\usepackage{xcolor}
+\newcommand{\eac}[1]{{\em Eric:  }{\color{red}{#1}}}
+
 % LATEX PACKAGES
 \usepackage{desc-tex/styles/lsstdesc_macros}
 
 \begin{document}
 
-\title{Minimal Example}
+\title{Photometric redshift data challenge}
 \author{A.\ N.\ Author}
 \date{\today}
 
 \begin{abstract}
-  Abstraction
-\end{abstract}
+ Addressing DESC science questions will require running analysis
+ pipelines on simulated data to ensure these pipelines work as
+ intended, characterize their performance, and compare them to inform
+ decisions on fiducial choices on data.  We are organizing the
+ photometric redshift (PZ) data challenge to asses the current status
+ of PZ algoritms and analysis pipelines.   This document describes the
+ format of the PZ challenge, including the data that participants will
+ use, the types of tasks that they will be asked to do, and the metric
+ and criteria by which submission will be assseed.
+ \end{abstract}
 
 \maketitle
 
 \section{Introduction}
-Hello World.
+
+Redshift inference is a key measurement for multiple DESC science
+goals and redshift uncertainty is one of the leading contributors to
+overall uncertainty on cosmological models from imaging survey
+data. Precursor surveys took a variety of approaches to this problem,
+accounting for differences in underlying data as well as modeling
+approaches. In all cases, redshift uncertainty was significantly
+larger than DESC Science Requirements listed in the LSST DESC Science
+Requirements Document.
+
+This state-of-the-art motivates a data challenge to characterize and
+improve existing methods, as well as provide infrastructure for the
+development of improved methods. Overall, this requires generating
+uniform input catalogs to use and infrastructure for comparing output
+redshift posteriors to each other and to simulated truth catalogs.
+
+
+\section{Challenge Format}
+
+The PZ data challenge comprises a set of tasks for participants.
+These task will be used to evaluate how ready various algorithms are
+to be used for cutting edge analysis.  Readiness will be evaluated on
+a few different fronts.  1) Does the algorithm meet performance
+requirements?  2) Is it robust, flexible and relatively easy to use on
+different datasets?  3) Is it scalable up to the scales we will need
+to use it at.
+
+This document and the associated web pages describe the data being
+provided to participants, the task they will be asked to perform, and
+the metrics by which the algorithms readiness will be evaluated.
+
+
+\subsection{Scope and Timeline}
+
+The data challenge will include two major parts, with a set of
+task emulating increasingly realistic scenarios in each part.   The
+first part, $p(z)$ estimation, will focus on estimating the redshift of
+individual objets.   The second part, tomogrpahy and $n(z)$ estimation
+will focus on assigning object to tomographic bins and estimating the
+distribution of redshifts in each bin.
+
+The data challenge will run from April 13, 2026 to August 7, 2026.
+The first set of data and tasks related to $p(z)$ estimation will be
+released on April 13.  A second set of data and tasks related to
+$n(z)$ estimation will be released on June 1.
+
+Preliminary results will be released on August 14, 2026, with a
+techincal note summarize those result to follow shortly thereafter and
+a comprehensive journal publication to follow later.
+
+
+\subsection{Challgenge Data}
+
+The preparation of the challenge data is described in the appendices.
+The data is available as \texttt{tar} archives on the data
+challenge site.
+
+\eac{Details about data packaging}
+
+
+\subsection{Challenge Tasks and Submission Types}
+
+The challenge is organized as a series of sets tasks using
+increasingly realistic representations of the data.   In general, each
+set of task includes 3 tasks.
+
+\begin{enumerate}
+  \item{Estimate either per-object $p(z)$ or ensemble $n(z)$
+      distributions for a set of different scenarios and provide the
+      estimates in a specfied format.}
+  \item{Provide trained models for the different scenarios, and a
+      generic script that can be used generate the estimates from task
+      1 on an arbitrary dataset.}    
+  \item{Provide a generic script that can be used generate the
+      generate the models and estimates from tasks 1 and 2 on
+      arbitrary datasets.}
+\end{enumerate}
+
+
+\subsection{Data format for per-object $p(z)$ estimates}
+
+\eac{Details about data packaging}
+
+
+\subsection{Data format for tomographic bin assignments}
+
+\eac{Details about data packaging}
+
+
+\subsection{Data format for ensemble $n(z)$ estimates}
+
+\eac{Details about data packaging}
+
+
+\subsection{Format for estimation only scripts and trained models}
+
+\eac{Details about data packaging}
+
+
+\subsection{Format for training and estimation scripts}
+
+\eac{Details about data packaging}
+
+
+\section{Metrics and Assesment Criteria}
+
+
+\subsection{Metrics for per-object point-estimates}
+
+\eac{Bias, scatter and MAD}
+
+
+\subsection{Metrics for per-object $p(z)$ distributions}
+
+\eac{PIT-QQ related metrics}
+
+
+\subsection{Metrics for per-object estimation computational performance}
+
+\eac{Training time, per-object estimation time, model size, estimate data volume per-object}
+
+
+\subsection{Metrics for bin assignement}
+
+\eac{Efficiency and purity}
+
+
+\subsection{Metrics for ensemble $n(z)$ estimation}
+
+\eac{Bias, width, simplified fisher forecast}
+
+
+\subsection{Metrics for ensemble estimation performance}
+
+\eac{Training time, per-object estimation time, model size}
+
+
+
+\section{Challenge Tasks related to $p(z)$ estimation}\label{sec:tasks}
+
+\subsection{Task set 1:  estimate redshifts on representative
+  samples}
+
+
+\subsection{Task set 2:  estimate redshifts on non-representative
+  samples}
+
+
+\subsection{Task set 3:  estimate redshifts on non-representative
+  samples with some mis-labeled redshifts}
+
+
+\subsection{Task set 4:  estimate redshifts on non-representative
+  samples with some mis-labeled redshifts and blended objects}
+
+
+
+\section{Challenge Tasks related to $n(z)$ estimation}
+
+
+\subsection{Task set 1:  assign objects to fixed tomographic bins and
+  estimate the n(z) distribution in each bin}
+
+
+\subsection{Task set 2:  assign objects to arbitrary n(z) bins and
+  estimate the n(z) distribution for each bin}
+
+
+
+\appendix
+
+\section{Input simulations}
+
+\section{Emulating observational effects}
+
+\section{Photometric Smearing}
+
+\section{Spectroscopic and narrow-band photo-metric redshift selection}
+
+\section{Preparing Training and Test and Reserved datasets}
+
 
 \end{document}
 
