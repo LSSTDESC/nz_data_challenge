@@ -10,7 +10,7 @@ import tables_io
 
 # Set these to be correct for your submission
 SUBMISSION_NAME: str="example"
-SUBMISSION_URL: str="https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/example_submission.tgz"
+SUBMISSION_URL: str="https://s3df.slac.stanford.edu/people/echarles/example.tgz"
 
 # don't change these
 PUBLIC_URL: str="https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public.tgz"
