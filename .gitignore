@@ -2,6 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
+.DS_Store
 
 # C extensions
 *.so
@@ -9,6 +10,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+public/
 develop-eggs/
 dist/
 downloads/
