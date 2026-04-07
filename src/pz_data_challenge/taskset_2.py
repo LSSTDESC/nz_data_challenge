@@ -10,6 +10,7 @@ SCENARIOS = ["1yr", "10yr"]
 
 
 def run_taskset_2(
+    public_area: str,        
     submission: str,
     run_taskset_2_estimation_only,
     run_taskset_2_training_and_estimation,
@@ -31,10 +32,10 @@ def run_taskset_2(
                 submit_dir, f"pz_challenge_taskset_1_{sim}_pz_model_{scenario}.hdf5"
             )
             training_file = os.path.join(
-                "public", f"pz_challenge_taskset_1_{sim}_training_{scenario}.hdf5"
+                public_area, f"pz_challenge_taskset_1_{sim}_training_{scenario}.hdf5"
             )
             test_file = os.path.join(
-                "public", f"pz_challenge_taskset_1_{sim}_test_{scenario}.hdf5"
+                public_area, f"pz_challenge_taskset_1_{sim}_test_{scenario}.hdf5"
             )
             output_file_2 = os.path.join(
                 submit_dir, "outputs_2", f"pz_challenge_taskset_1_{sim}_pz_estimate_{scenario}.hdf5"

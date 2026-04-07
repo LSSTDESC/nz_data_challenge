@@ -16,6 +16,7 @@ SUBMISSION_URL: str = "https://s3df.slac.stanford.edu/people/echarles/example.tg
 
 # don't change these
 SUBMIT_DIR: str = f"submissions/{SUBMISSION_NAME}"
+PUBLIC_AREA: str = "tests/public"
 
 
 @pytest.fixture(name=f"setup_submit_area", scope="module")
@@ -220,7 +221,7 @@ def test_example_taskset_1(
     assert setup_public_area == 0
     assert setup_submit_area == 0
     
-    run_taskset_1(SUBMISSION_NAME, run_taskset_1_estimation_only, run_taskset_1_training_and_estimation)
+    run_taskset_1(PUBLIC_AREA, SUBMISSION_NAME, run_taskset_1_estimation_only, run_taskset_1_training_and_estimation)
 
     
 def test_example_taskset_2(
@@ -231,4 +232,4 @@ def test_example_taskset_2(
     assert setup_public_area == 0
     assert setup_submit_area == 0
     
-    run_taskset_2(SUBMISSION_NAME, run_taskset_2_estimation_only, run_taskset_2_training_and_estimation)
+    run_taskset_2(PUBLIC_AREA, SUBMISSION_NAME, run_taskset_2_estimation_only, run_taskset_2_training_and_estimation)

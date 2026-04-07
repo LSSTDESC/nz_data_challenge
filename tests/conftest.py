@@ -10,7 +10,7 @@ PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public.tg
 @pytest.fixture(name="setup_public_area", scope="package")
 def setup_public_area(request: pytest.FixtureRequest) -> int:
 
-    if not os.path.exists("public"):
+    if not os.path.exists("tests/public"):
         submit_utils.download_and_extract_tar(PUBLIC_URL, "tests/public")
 
     def teardown_public_area():
