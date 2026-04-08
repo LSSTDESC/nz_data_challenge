@@ -1,6 +1,5 @@
 import os
 import tarfile
-import time
 import tempfile
 from typing import Any
 import urllib.request
@@ -10,7 +9,7 @@ import qp
 import tables_io
 
 
-def download_and_extract_tar(url: str, extract_to: str|Path = ".") -> None:
+def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
     """
     Download a tar file from a URL and extract its contents.
 
@@ -58,8 +57,8 @@ def download_and_extract_tar(url: str, extract_to: str|Path = ".") -> None:
 
 
 def check_pz_submission_file(
-    submit_file: str|Path,
-    test_file: str|Path,
+    submit_file: str | Path,
+    test_file: str | Path,
 ) -> list[int]:
     """
     Validate a photo-z submission file against test data requirements.
@@ -99,7 +98,7 @@ def check_pz_submission_file(
     """
     # build the output list
     out_list: list[int] = []
-    
+
     # Convert to Path objects for easier handling
     submit_path: Path = Path(submit_file)
     test_path: Path = Path(test_file)
@@ -107,13 +106,13 @@ def check_pz_submission_file(
     # Check that test_file exists
     if not test_path.exists():
         raise FileNotFoundError(f"Test file not found: {test_file}")
-    
+
     # Check that submit_file exists
     if not submit_path.exists():
         return out_list
 
-    out_list += [1]    
-    
+    out_list += [1]
+
     # Open and validate qp format
     try:
         ensemble = qp.read(submit_file)
@@ -133,7 +132,7 @@ def check_pz_submission_file(
     if ancil is None:
         return out_list
 
-    out_list += [4]    
+    out_list += [4]
 
     # Check for zmode entry
     if "zmode" in ancil:
@@ -162,29 +161,28 @@ def check_pz_submission_file(
 
 def pretty_print_manifest_dict(manifest_dict: dict[str, Any]) -> None:
     print("Key                            Status")
-    print("-------------------------------------------")    
-    
+    print("-------------------------------------------")
+
     for key, checks in manifest_dict.items():
-        if key.find('time') >= 0:
+        if key.find("time") >= 0:
             continue
         outst = ""
-        for i in range(1,8):
+        for i in range(1, 8):
             if i in checks:
                 outst += "+ "
             else:
                 outst += "- "
-                
+
         print(f"{key:<30} {outst}")
         print("")
-                
+
 
 def pretty_print_time_dict(manifest_dict: dict[str, Any]) -> None:
-                
+
     print("Key                            Time")
-    print("-------------------------------------------")    
+    print("-------------------------------------------")
     for key, time_ in manifest_dict.items():
-        if key.find('time') < 0:
+        if key.find("time") < 0:
             continue
         print(f"{key:<30} {time_:.2f}")
         print("")
-    

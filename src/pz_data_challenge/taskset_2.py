@@ -1,7 +1,6 @@
-
 import os
 import time
-from typing import Any
+from typing import Any, Callable
 
 from . import submit_utils
 
@@ -10,11 +9,11 @@ SCENARIOS = ["1yr", "10yr"]
 
 
 def run_taskset_2(
-    public_area: str,        
+    public_area: str,
     submission: str,
-    run_taskset_2_estimation_only,
-    run_taskset_2_training_and_estimation,
-):
+    run_taskset_2_estimation_only: Callable,
+    run_taskset_2_training_and_estimation: Callable,
+) -> None:
 
     submit_dir: str = f"submissions/{submission}"
 
@@ -38,10 +37,14 @@ def run_taskset_2(
                 public_area, f"pz_challenge_taskset_1_{sim}_test_{scenario}.hdf5"
             )
             output_file_2 = os.path.join(
-                submit_dir, "outputs_2", f"pz_challenge_taskset_1_{sim}_pz_estimate_{scenario}.hdf5"
+                submit_dir,
+                "outputs_2",
+                f"pz_challenge_taskset_1_{sim}_pz_estimate_{scenario}.hdf5",
             )
             output_file_3 = os.path.join(
-                submit_dir, "outputs_3", f"pz_challenge_taskset_1_{sim}_pz_estimate_{scenario}.hdf5"
+                submit_dir,
+                "outputs_3",
+                f"pz_challenge_taskset_1_{sim}_pz_estimate_{scenario}.hdf5",
             )
 
             # Check on the premade submission files
@@ -64,10 +67,12 @@ def run_taskset_2(
             # Run the train and estimate function
             if run_taskset_2_training_and_estimation is not None:
                 time_3_before = time.time()
-                run_taskset_2_training_and_estimation(training_file, test_file, output_file_3)
+                run_taskset_2_training_and_estimation(
+                    training_file, test_file, output_file_3
+                )
                 time_3 = time.time() - time_3_before
                 manifest_dict[f"{key}_time_3"] = time_3
-                
+
                 # Check on the files made by the estimate only function
                 manifest_dict[f"{key}_3"] = submit_utils.check_pz_submission_file(
                     output_file_3, test_file

@@ -19,14 +19,14 @@ SUBMIT_DIR: str = f"submissions/{SUBMISSION_NAME}"
 PUBLIC_AREA: str = "tests/public"
 
 
-@pytest.fixture(name=f"setup_submit_area", scope="module")
+@pytest.fixture(name="setup_submit_area", scope="module")
 def setup_submit_area(request: pytest.FixtureRequest) -> int:
 
     if not os.path.exists(SUBMIT_DIR):
         submit_utils.download_and_extract_tar(SUBMISSION_URL, SUBMIT_DIR)
 
-    def teardown_submit_area():
-        if not os.environ.get('NO_TEARDOWN'):
+    def teardown_submit_area() -> None:
+        if not os.environ.get("NO_TEARDOWN"):
             os.system(f"\\rm -rf {SUBMIT_DIR}")
 
     try:
@@ -41,9 +41,9 @@ def setup_submit_area(request: pytest.FixtureRequest) -> int:
 
     request.addfinalizer(teardown_submit_area)
 
-    catalog_utils.load_yaml('tests/catalogs.yaml')
-    catalog_utils.apply('cardinal_roman_rubin')    
-    
+    catalog_utils.load_yaml("tests/catalogs.yaml")
+    catalog_utils.apply("cardinal_roman_rubin")
+
     return 0
 
 
@@ -51,7 +51,7 @@ def run_taskset_1_estimation_only(
     model_file: str | Path,
     test_file: str | Path,
     output_file: str | Path,
-) -> bool:
+) -> None:
     """
     User supplied function to run estimation for task set 1
 
@@ -72,21 +72,21 @@ def run_taskset_1_estimation_only(
     output_file:
         Path to write the output data to.  The output data should
         be written in qp format.
-    """    
-    test_data = TableHandle('test', path=test_file)
+    """
+    test_data = TableHandle("test", path=test_file)
     estimator = sklearn_neurnet.SklNeurNetEstimator.make_stage(
-        name=f"estimate",
+        name="estimate",
         model=model_file,
-        output_mode='return',        
+        output_mode="return",
     )
     pz_out = estimator.estimate(test_data)
-    pz_out.data.ancil['object_id'] = test_data()['object_id'].astype(int)
+    pz_out.data.ancil["object_id"] = test_data()["object_id"].astype(int)
     pz_out.path = output_file
     pz_out.write()
 
 
 def run_taskset_1_training_and_estimation(
-    train_file: str | Path, 
+    train_file: str | Path,
     test_file: str | Path,
     output_file: str | Path,
 ) -> None:
@@ -109,25 +109,25 @@ def run_taskset_1_training_and_estimation(
     output_file:
         Path to write the output data to.  The output data should
         be written in qp format.
-    """    
-    train_data = TableHandle('train', path=train_file)
-    test_data = TableHandle('test', path=test_file)
+    """
+    train_data = TableHandle("train", path=train_file)
+    test_data = TableHandle("test", path=test_file)
 
     informer = sklearn_neurnet.SklNeurNetInformer.make_stage(
-        name=f"inform",
+        name="inform",
     )
     model = informer.inform(train_data)
-    
+
     estimator = sklearn_neurnet.SklNeurNetEstimator.make_stage(
-        name=f"estimate",
+        name="estimate",
         model=model,
-        output_mode='return',        
+        output_mode="return",
     )
     pz_out = estimator.estimate(test_data)
-    pz_out.data.ancil['object_id'] = test_data()['object_id'].astype(int)
+    pz_out.data.ancil["object_id"] = test_data()["object_id"].astype(int)
     pz_out.path = output_file
-    pz_out.write()    
-    
+    pz_out.write()
+
 
 def run_taskset_2_estimation_only(
     model_file: str | Path,
@@ -154,24 +154,24 @@ def run_taskset_2_estimation_only(
     output_file:
         Path to write the output data to.  The output data should
         be written in qp format.
-    """    
-    test_data = TableHandle('test', path=test_file)
+    """
+    test_data = TableHandle("test", path=test_file)
     estimator = sklearn_neurnet.SklNeurNetEstimator.make_stage(
-        name=f"estimate",
+        name="estimate",
         model=model_file,
-        output_mode='return',        
+        output_mode="return",
     )
     pz_out = estimator.estimate(test_data)
-    pz_out.data.ancil['object_id'] = test_data()['object_id'].astype(int)
+    pz_out.data.ancil["object_id"] = test_data()["object_id"].astype(int)
     pz_out.path = output_file
     pz_out.write()
 
 
 def run_taskset_2_training_and_estimation(
-    train_file: str | Path, 
+    train_file: str | Path,
     test_file: str | Path,
     output_file: str | Path,
-) -> bool:
+) -> None:
     """
     User supplied function to run training and estimation for task set 1
 
@@ -188,22 +188,22 @@ def run_taskset_2_training_and_estimation(
     output_file:
         Path to write the output data to.  The output data should
         be written in qp format.
-    """    
-    train_data = TableHandle('train', path=train_file)
-    test_data = TableHandle('test', path=test_file)
+    """
+    train_data = TableHandle("train", path=train_file)
+    test_data = TableHandle("test", path=test_file)
 
     informer = sklearn_neurnet.SklNeurNetInformer.make_stage(
-        name=f"inform",
+        name="inform",
     )
     model = informer.inform(train_data)
-    
+
     estimator = sklearn_neurnet.SklNeurNetEstimator.make_stage(
-        name=f"estimate",
+        name="estimate",
         model=model,
-        output_mode='return',        
+        output_mode="return",
     )
     pz_out = estimator.estimate(test_data)
-    pz_out.data.ancil['object_id'] = test_data()['object_id'].astype(int)
+    pz_out.data.ancil["object_id"] = test_data()["object_id"].astype(int)
     pz_out.path = output_file
     pz_out.write()
 
@@ -212,19 +212,29 @@ def test_example_taskset_1(
     setup_public_area: int,
     setup_submit_area: int,
 ) -> None:
-    
+
     assert setup_public_area == 0
     assert setup_submit_area == 0
-    
-    run_taskset_1(PUBLIC_AREA, SUBMISSION_NAME, run_taskset_1_estimation_only, run_taskset_1_training_and_estimation)
 
-    
+    run_taskset_1(
+        PUBLIC_AREA,
+        SUBMISSION_NAME,
+        run_taskset_1_estimation_only,
+        run_taskset_1_training_and_estimation,
+    )
+
+
 def test_example_taskset_2(
     setup_public_area: int,
     setup_submit_area: int,
 ) -> None:
-    
+
     assert setup_public_area == 0
     assert setup_submit_area == 0
-    
-    run_taskset_2(PUBLIC_AREA, SUBMISSION_NAME, run_taskset_2_estimation_only, run_taskset_2_training_and_estimation)
+
+    run_taskset_2(
+        PUBLIC_AREA,
+        SUBMISSION_NAME,
+        run_taskset_2_estimation_only,
+        run_taskset_2_training_and_estimation,
+    )
