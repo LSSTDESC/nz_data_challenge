@@ -1,0 +1,6 @@
+pdflatex nz_challenge
+bibtex nz_challenge
+pdflatex nz_challenge
+pdflatex nz_challenge
+
+pandoc -t rst nz_challenge.tex --output nz_challenge.rst

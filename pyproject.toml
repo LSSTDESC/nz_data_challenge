@@ -1,5 +1,5 @@
 [project]
-name = "pz-data-challenge"
+name = "nz-data-challenge"
 description = "Photometric redshift data challenge"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -24,6 +24,8 @@ dependencies = [
     "qp-prob>=1.0.0",
     "matplotlib",
     "tables_io[full]",
+    "numpy",
+    "fisher-a2z",
 ]
 # On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
 [project.optional-dependencies]
@@ -52,7 +54,7 @@ requires = ["setuptools>=62", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "src/pz_data_challenge/_version.py"
+write_to = "src/nz_data_challenge/_version.py"
 
 [tool.pytest.ini_options]
 testpaths = [

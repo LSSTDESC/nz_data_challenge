@@ -1,7 +1,8 @@
+"""Utilities for downloading and validating photo-z submissions."""
+
 import os
 import tarfile
 import tempfile
-from typing import Any
 import urllib.request
 from pathlib import Path
 
@@ -10,21 +11,16 @@ import tables_io
 
 
 def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
-    """
-    Download a tar file from a URL and extract its contents.
+    """Download a tar file from a URL and extract its contents.
 
     Parameters
     ----------
-    url : str
+    url
         URL of the tar file to download. Supports .tar, .tar.gz, .tgz,
         .tar.bz2, and .tar.xz formats.
-    extract_to : str or Path, optional
+    extract_to
         Directory path where the contents will be extracted.
         Default is the current directory ('.').
-
-    Returns
-    -------
-    None
 
     Raises
     ------
@@ -42,147 +38,130 @@ def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
     file. The downloaded tar file is stored in a temporary location and
     automatically deleted after extraction.
     """
-    # Download to temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".tar") as tmp_file:
         tmp_path: str = tmp_file.name
         urllib.request.urlretrieve(url, tmp_path)
 
     try:
-        # Extract with automatic format detection
         with tarfile.open(tmp_path, "r:*") as tar:
             tar.extractall(path=extract_to, filter="data")
     finally:
-        # Clean up temporary file
         os.unlink(tmp_path)
 
 
-def check_pz_submission_file(
-    submit_file: str | Path,
+def check_files(
+    nz_file: str | Path,
+    bhat_file: str | Path,
     test_file: str | Path,
-) -> list[int]:
-    """
-    Validate a photo-z submission file against test data requirements.
+    n_tomo_bins: int | None = None,
+) -> None:
+    """Validate photo-z submission files against test data requirements.
 
-    This function checks that a submission file exists, is in valid qp format,
-    contains required ancillary data (zmode and object_id), and that the
-    object IDs match those in the test file.
+    Checks that a submission file exists, is in valid qp format, contains
+    required ancillary data, and that the object IDs match those in the
+    test file.
 
     Parameters
     ----------
-    submit_file : str or Path
-        Path to the submission file to validate. Must be in qp-readable format.
-    test_file : str or Path
-        Path to the test file containing reference object IDs. Must be readable
-        by tables_io.
-
-    Returns
-    -------
-    List with flags to mark if submission file exists and is well formatted
+    nz_file
+        Path to the n(z) submission file to validate. Must be in
+        qp-readable format.
+    bhat_file
+        Path to the bhat (bin assignment) submission file to validate.
+        Must be in tables_io readable format.
+    test_file
+        Path to the test file containing reference object IDs. Must be
+        readable by tables_io.
+    n_tomo_bins
+        If set, requires that nz_file have this many tomographic bins.
 
     Raises
     ------
-    FileNotFoundError
-        If test_file does not exist.
+    RuntimeError
+        If validation fails.
 
     Notes
     -----
-    The function performs the following checks in order, and assigns
-    corresponding flags to the output list for each
-    1. File existence
+    The function performs the following checks in order:
+
+    1. n(z) file existence
     2. Valid qp ensemble format
-    3. Presence of ancillary dictionary
-    4. Presence of 'zmode' in ancillary data
-    5. Presence of 'object_id' in ancillary data
-    6. Matching object IDs between submission and test files
-
+    3. Presence of ancillary dictionary and 'n_object' in ancillary data
+    4. Correct number of tomographic bins
+    5. bhat file existence
+    6. bhat file is tables_io readable and has 'bhat_for_wide_data' and
+       'object_id' columns
+    7. Matching number of objects
+    8. Matching object_id columns in bhat_file against test_file
     """
-    # build the output list
-    out_list: list[int] = []
+    if not Path(nz_file).exists():
+        raise RuntimeError(f"n(z) file {nz_file} does not exist")
 
-    # Convert to Path objects for easier handling
-    submit_path: Path = Path(submit_file)
-    test_path: Path = Path(test_file)
-
-    # Check that test_file exists
-    if not test_path.exists():
-        raise FileNotFoundError(f"Test file not found: {test_file}")
-
-    # Check that submit_file exists
-    if not submit_path.exists():
-        return out_list
-
-    out_list += [1]
-
-    # Open and validate qp format
     try:
-        ensemble = qp.read(submit_file)
-    except Exception:
-        return out_list
+        qp_ens = qp.read(nz_file)
+    except Exception as exc:
+        raise RuntimeError(
+            f"n(z) file {nz_file} could not be read by qp because {exc}"
+        ) from exc
 
-    out_list += [2]
-
-    # Check that ancillary dict exists
     try:
-        ancil = ensemble.ancil
-    except AttributeError:
-        return out_list
+        n_objects = qp_ens.ancil['n_object']
+    except Exception as exc:
+        raise RuntimeError(
+            f"n(z) file {nz_file} does not have 'n_object' in its ancil table"
+        ) from exc
 
-    out_list += [3]
+    if n_tomo_bins is not None:
+        if qp_ens.npdf != n_tomo_bins:
+            raise RuntimeError(
+                f"n(z) file {nz_file} has {qp_ens.npdf} tomo bins"
+                f" with {n_tomo_bins} expected"
+            )
 
-    if ancil is None:
-        return out_list
+    if not Path(bhat_file).exists():
+        raise RuntimeError(
+            f"bhat (bin assignment) file {bhat_file} does not exist"
+        )
 
-    out_list += [4]
+    try:
+        bhat = tables_io.read(bhat_file)
+    except Exception as exc:
+        raise RuntimeError(
+            f"bhat (bin assignment) file {bhat_file} could not be read"
+            f" by tables_io because {exc}"
+        ) from exc
 
-    # Check for zmode entry
-    if "zmode" in ancil:
-        out_list += [5]
+    if 'bhat_for_wide_data' not in bhat:
+        raise RuntimeError(
+            f"bhat (bin assignment) file {bhat_file} does not contain"
+            " 'bhat_for_wide_data'"
+        )
+    if 'object_id' not in bhat:
+        raise RuntimeError(
+            f"bhat (bin assignment) file {bhat_file} does not contain"
+            " 'object_id'"
+        )
 
-    # Check for object_id entry
-    if "object_id" in ancil:
-        out_list += [6]
+    submit_ids = set(bhat['object_id'])
 
-    # Get object IDs from submission file
-    submit_ids = set(ancil["object_id"])
+    n_assigned = (bhat['bhat_for_wide_data'] >= 0).sum()
+    if n_assigned != n_objects.sum():
+        raise RuntimeError(
+            f"Number of assigned objects in {bhat_file} ({n_assigned})"
+            f" != sum of n_objects in n(z) file ({n_objects.sum()})"
+        )
 
-    # Get object IDs from test file
     try:
         test_data = tables_io.read(test_file)
         test_ids = set(test_data["object_id"])
-    except Exception as e:
-        raise Exception(f"Failed to read test file: {e}")
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to read test file {test_file}: {exc}"
+        ) from exc
 
-    # Check that object IDs match
-    if submit_ids == test_ids:
-        out_list += [7]
-
-    return out_list
-
-
-def pretty_print_manifest_dict(manifest_dict: dict[str, Any]) -> None:
-    print("Key                            Status")
-    print("-------------------------------------------")
-
-    for key, checks in manifest_dict.items():
-        if key.find("time") >= 0:
-            continue
-        outst = ""
-        for i in range(1, 8):
-            if i in checks:
-                outst += "+ "
-            else:
-                outst += "- "
-
-        print(f"{key:<30} {outst}")
-        print("")
-
-
-def pretty_print_time_dict(manifest_dict: dict[str, Any]) -> None:
-
-    print("Key                            Time")
-    print("-------------------------------------------")
-    for key, time_ in manifest_dict.items():
-        if key.find("time") < 0:
-            continue
-        print(f"{key:<30} {time_:.2f}")
-        print("")
+    if submit_ids != test_ids:
+        diff_set = submit_ids - test_ids
+        raise RuntimeError(
+            f"Object ids in bhat (bin assignment) file {bhat_file}"
+            f" do not match {test_file}: {diff_set}"
+        )
