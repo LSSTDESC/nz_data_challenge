@@ -33,6 +33,8 @@ models/
 *.hdf5
 *.tgz
 *.tar.gz
+nb/Sandbox.ipynb
+nb/submission
 
 
 # PyInstaller
