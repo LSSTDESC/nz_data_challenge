@@ -86,7 +86,7 @@ def check_files(
 
     1. n(z) file existence
     2. Valid qp ensemble format
-    3. Presence of ancillary dictionary and 'n_object' in ancillary data
+    3. Presence of ancillary dictionary and 'n_objects' in ancillary data
     4. Correct number of tomographic bins
     5. bhat file existence
     6. bhat file is tables_io readable and has 'bhat_for_wide_data' and
@@ -105,10 +105,10 @@ def check_files(
         ) from exc
 
     try:
-        n_objects = qp_ens.ancil['n_object']
+        n_objects = qp_ens.ancil['n_objects']
     except Exception as exc:
         raise RuntimeError(
-            f"n(z) file {nz_file} does not have 'n_object' in its ancil table"
+            f"n(z) file {nz_file} does not have 'n_objects' in its ancil table"
         ) from exc
 
     if n_tomo_bins is not None:
@@ -131,10 +131,10 @@ def check_files(
             f" by tables_io because {exc}"
         ) from exc
 
-    if 'bhat_for_wide_data' not in bhat:
+    if 'tomo_bin_index' not in bhat:
         raise RuntimeError(
             f"bhat (bin assignment) file {bhat_file} does not contain"
-            " 'bhat_for_wide_data'"
+            " 'tomo_bin_index'"
         )
     if 'object_id' not in bhat:
         raise RuntimeError(
@@ -144,7 +144,7 @@ def check_files(
 
     submit_ids = set(bhat['object_id'])
 
-    n_assigned = (bhat['bhat_for_wide_data'] >= 0).sum()
+    n_assigned = (bhat['tomo_bin_index'] >= 0).sum()
     if n_assigned != n_objects.sum():
         raise RuntimeError(
             f"Number of assigned objects in {bhat_file} ({n_assigned})"

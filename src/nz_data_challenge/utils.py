@@ -120,7 +120,7 @@ def get_nz_distributions(
     ----------
     nz_estimates
         A qp Ensemble containing the n(z) estimates with an ancillary
-        table that includes 'n_object'.
+        table that includes 'n_objects'.
     grid_centers
         Redshift grid centers at which to evaluate the PDFs.
     n_bins
@@ -133,7 +133,7 @@ def get_nz_distributions(
         distributions.
     """
     pdfs = nz_estimates.pdf(grid_centers)
-    norms = nz_estimates.ancil['n_object']
+    norms = nz_estimates.ancil['n_objects']
     out_list = []
     for i in range(n_bins):
         binx = pdfs[i]
