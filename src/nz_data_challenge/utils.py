@@ -4,6 +4,10 @@ import qp
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
+TASKSETS = ['taskset_1', 'taskset_2']
+SIMS = ['cardinal', 'flagship']
+SCENARIOS = ['1yr', '4yr']
+
 
 def histogram_stats(
     bin_values: ArrayLike, bin_edges: ArrayLike

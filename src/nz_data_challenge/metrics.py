@@ -41,7 +41,7 @@ def log_loss_from_labels(
 
     true_class_probs = probs[np.arange(n_samples), y_true]
 
-    return -np.mean(np.log(true_class_probs))
+    return float(-np.mean(np.log(true_class_probs)))
 
 
 def cohens_kappa(
@@ -83,7 +83,7 @@ def cohens_kappa(
     if p_e == 1.0:
         return 1.0
 
-    return (p_o - p_e) / (1 - p_e)
+    return float((p_o - p_e) / (1 - p_e))
 
 
 def balanced_accuracy(
@@ -119,7 +119,7 @@ def balanced_accuracy(
         true_positives = np.sum(actual_k & (y_pred == k))
         recalls.append(true_positives / n_actual)
 
-    return np.mean(recalls)
+    return float(np.mean(recalls))
 
 
 def kl_divergence(p: ArrayLike, q: ArrayLike, eps: float = 1e-12) -> float:
@@ -146,7 +146,7 @@ def kl_divergence(p: ArrayLike, q: ArrayLike, eps: float = 1e-12) -> float:
     q = np.asarray(q, dtype=float) + eps
     p /= p.sum()
     q /= q.sum()
-    return np.sum(p * np.log2(p / q))
+    return float(np.sum(p * np.log2(p / q)))
 
 
 def total_information_loss(
@@ -183,8 +183,8 @@ def total_information_loss(
     weights = np.asarray(weights, dtype=float)
     weights /= weights.sum()
 
-    total = np.sum(weights * per_class)
-    return total, per_class
+    total = float(np.sum(weights * per_class))
+    return total, per_class.tolist()
 
 
 def wasserstein_dist(
@@ -206,7 +206,7 @@ def wasserstein_dist(
     float
         First Wasserstein distance.
     """
-    return wasserstein_distance(x, x, u_weights=p, v_weights=q)
+    return float(wasserstein_distance(x, x, u_weights=p, v_weights=q))
 
 
 def mutual_info(
@@ -236,7 +236,7 @@ def mutual_info(
         discrete_features=False,
     )[0]
     mi_bits = mi_nats / np.log(2)
-    return mi_bits
+    return float(mi_bits)
 
 
 def rms0_delta_summary_stats(
@@ -269,6 +269,6 @@ def rms0_delta_summary_stats(
     nz_true_stats = utils.histogram_stats_2d(true_distributions, grid_edges)
     del_mean = nz_stats['mean'] - nz_true_stats['mean']
     del_std = nz_stats['std'] - nz_true_stats['std']
-    rms0_mean = np.sqrt((del_mean * del_mean).mean())
-    rms0_std = np.sqrt((del_std * del_std).mean())
+    rms0_mean = float(np.sqrt((del_mean * del_mean).mean()))
+    rms0_std = float(np.sqrt((del_std * del_std).mean()))
     return {"mean": rms0_mean, "std": rms0_std}

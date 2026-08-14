@@ -165,3 +165,17 @@ def check_files(
             f"Object ids in bhat (bin assignment) file {bhat_file}"
             f" do not match {test_file}: {diff_set}"
         )
+
+
+def check_submission(
+    public_dir: str | Path,
+    submit_dir: str | Path,
+) -> None:
+
+    for taskset in TASKSETS:
+        for sim in SIM:
+            for scenario in SCENARIOS:
+                wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"                
+                nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
+                bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+                submit_utils.check_files(nz_file, bhat_file, wfd_file, 5)
