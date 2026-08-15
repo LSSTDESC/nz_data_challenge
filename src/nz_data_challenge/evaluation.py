@@ -1,3 +1,5 @@
+"""Evaluation pipeline for n(z) challenge submissions."""
+
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,6 +9,8 @@ import qp
 import tables_io
 import yaml
 
+from typing import Any
+
 from . import metrics, utils
 from .utils import TASKSETS, SIMS, SCENARIOS
 
@@ -15,7 +19,7 @@ TOMO_BIN_COLORS = [
     'green', 'yellow', 'orange', 'red', 'gray',
 ]
 
-METRICS = dict(
+METRICS: dict[str, dict[str, Any]] = dict(
     accuracy=dict(
         label='Bin Assignment Accuracy',
         limits=[0, 1],
@@ -66,10 +70,24 @@ grid_centers = 0.5*(grid_edges[0:-1]+grid_edges[1:])
 
 
 def evaluate_bin_assignments(
-    true_assignments,
-    bin_assignments,
+    true_assignments: np.ndarray,
+    bin_assignments: np.ndarray,
 ) -> dict[str, float]:
+    """Evaluate tomographic bin assignment quality using multiple metrics.
 
+    Parameters
+    ----------
+    true_assignments
+        Array of true bin labels for each object.
+    bin_assignments
+        Array of predicted bin labels for each object.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys 'log_loss', 'accuracy', 'balanced_accuracy',
+        'cohens_kappa', and 'mutual_info'.
+    """
     the_dict: dict[str, float] = dict(
         log_loss = metrics.log_loss_from_labels(true_assignments, bin_assignments),
         accuracy = float((bin_assignments == true_assignments).sum() / true_assignments.size),
@@ -81,13 +99,32 @@ def evaluate_bin_assignments(
 
 
 def evaluate_distributions(
-    true_distributions,
-    nz_distributions,
-    grid_edges,
-    n_objects,
-) -> dict[str, float]:
+    true_distributions: np.ndarray,
+    nz_distributions: np.ndarray,
+    grid_edges: np.ndarray,
+    n_objects: np.ndarray,
+) -> dict[str, Any]:
+    """Evaluate n(z) distribution estimates against truth.
 
+    Parameters
+    ----------
+    true_distributions
+        List of true n(z) distributions per tomographic bin.
+    nz_distributions
+        List of estimated n(z) distributions per tomographic bin.
+    grid_edges
+        Redshift bin edges used for summary statistics.
+    n_objects
+        Number of objects per tomographic bin, used as weights for
+        information loss.
 
+    Returns
+    -------
+    dict
+        Dictionary with keys 'total_information_loss',
+        'per_bin_information_lost', 'rms0_delta_mean', and
+        'rms0_delta_std'.
+    """
     total_information_loss, per_bin_loss = metrics.total_information_loss(
         true_distributions, nz_distributions, n_objects,
     )
@@ -97,7 +134,7 @@ def evaluate_distributions(
         grid_edges,
     )
 
-    the_dict: dict[str, float] = dict(
+    the_dict: dict[str, Any] = dict(
         total_information_loss=total_information_loss,
         per_bin_information_lost=per_bin_loss,
         rms0_delta_mean=rms0_delta_summary_stats['mean'],
@@ -111,7 +148,22 @@ def plot_confusion_matrix(
     bin_assignments: np.ndarray,
     n_bins: int,
 ) -> Figure:
+    """Plot a confusion matrix of true vs. assigned tomographic bins.
 
+    Parameters
+    ----------
+    true_assignments
+        Array of true bin labels.
+    bin_assignments
+        Array of predicted bin labels.
+    n_bins
+        Number of tomographic bins.
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure with a 2D histogram (log-scaled).
+    """
     bin_sides = np.linspace(-0.5,n_bins-0.5,n_bins+1)
     fig = plt.figure(figsize=(6,6))
     axes = fig.subplots(1, 1)
@@ -125,11 +177,27 @@ def plot_confusion_matrix(
 
 
 def plot_nz_data(
-    true_distributions,
-    nz_distributions,
-    grid_edges,
+    true_distributions: np.ndarray,
+    nz_distributions: np.ndarray,
+    grid_edges: np.ndarray,
 ) -> Figure:
+    """Plot estimated and true n(z) distributions for all tomographic bins.
 
+    Parameters
+    ----------
+    true_distributions
+        Array of true n(z) distributions per bin.
+    nz_distributions
+        Array of estimated n(z) distributions per bin.
+    grid_edges
+        Redshift bin edges for the staircase plot.
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure showing true (solid) and estimated (dashed)
+        distributions.
+    """
     fig = plt.figure(figsize=(6,6))
     axes = fig.subplots(1, 1)
 
@@ -151,21 +219,38 @@ def evaluate_submission(
     tomo_bin_edges: np.ndarray,
     suffix: str = "wfd",
 ) -> None:
+    """Run full evaluation of a submission across all tasksets, sims, and scenarios.
 
-    full_output = {}
+    Computes bin assignment and distribution metrics, generates confusion
+    matrix and n(z) comparison plots, and writes results to YAML.
+
+    Parameters
+    ----------
+    submit_dir
+        Path to the submission directory containing n(z) and bhat files.
+    public_dir
+        Path to the public data directory with test WFD files.
+    truth_dir
+        Path to the truth directory containing true redshifts.
+    results_dir
+        Path to the output directory for plots and results YAML.
+    tomo_bin_edges
+        Array of tomographic bin edges for assigning true bins.
+    suffix
+        File suffix identifier (default 'wfd').
+    """
+    full_output: dict[str, dict[str, Any]] = {}
 
     for taskset in TASKSETS:
         for sim in SIMS:
             for scenario in SCENARIOS:
                 key = f"{taskset}_{sim}_{scenario}"
 
-                wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_{suffix}.hdf5"
                 nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_{suffix}.hdf5"
                 bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_{suffix}.hdf5"
                 truth_file = f'{truth_dir}/nz_challenge_{taskset}_{sim}_{scenario}_{suffix}.hdf5'
 
                 nz_estimates = qp.read(nz_file)
-                test_data = tables_io.read(wfd_file)
                 bhat_data = tables_io.read(bhat_file)
                 truth = tables_io.read(truth_file)
                 true_redshifts = truth['redshift']
@@ -191,12 +276,8 @@ def evaluate_submission(
         yaml.dump(full_output, fout)
 
 
-RUN_LABELS = []
-RUN_LABEL_DICT = {}
-
-TASKSETS = ['taskset_1', 'taskset_2']
-SIMS = ['cardinal', 'flagship']
-SCENARIOS = ['1yr', '4yr']
+RUN_LABELS: list[str] = []
+RUN_LABEL_DICT: dict[str, int] = {}
 
 for taskset in TASKSETS:
     for sim in SIMS:
@@ -210,6 +291,18 @@ for taskset in TASKSETS:
 def get_tuple_from_key(
     key: str,
 ) -> tuple[int, int, int, int]:
+    """Convert a run label key to its index components.
+
+    Parameters
+    ----------
+    key
+        Run label string of the form '{taskset}_{sim}_{scenario}'.
+
+    Returns
+    -------
+    tuple
+        Tuple of (flat_index, taskset_index, sim_index, scenario_index).
+    """
     idx = RUN_LABEL_DICT[key]
     taskset = int(idx // 4)
     sim = int((idx % 4) // 2)
@@ -221,7 +314,21 @@ def build_summary_stats_dataframe(
     submissions: list[str],
     results_top_dir: str | Path,
 ) -> pd.DataFrame:
+    """Build a DataFrame of all metric values across submissions and runs.
 
+    Parameters
+    ----------
+    submissions
+        List of submission names (subdirectories of results_top_dir).
+    results_top_dir
+        Top-level directory containing per-submission result directories.
+
+    Returns
+    -------
+    DataFrame
+        DataFrame with columns for submission, run, taskset, sim,
+        scenario, and each metric value.
+    """
     out_dict: dict[str, list] = {}
 
     first = True
@@ -260,7 +367,22 @@ def build_summary_stats_dataframe(
 def build_scores_dataframe(
     metrics_df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Convert metric values to integer scores based on predefined ranges.
 
+    Each metric is scored by counting how many predefined acceptable
+    ranges it falls within (0 to 3).
+
+    Parameters
+    ----------
+    metrics_df
+        DataFrame of metric values (as produced by
+        build_summary_stats_dataframe).
+
+    Returns
+    -------
+    DataFrame
+        DataFrame with metric columns replaced by integer scores.
+    """
     out_data = metrics_df.to_dict()
     n_data = len(metrics_df)
     
@@ -284,28 +406,25 @@ def make_strip_plot(
     submissions: list[str],
     metric_name: str,
 ) -> Figure:
-    """
-    Create a generic strip plot for comparing metrics across configurations.
+    """Create a strip plot comparing a metric across submissions and runs.
 
-    Displays scatter points for each submission across different taskset/scenario
-    combinations with highlighted metric ranges.
+    Displays scatter points for each submission across different
+    taskset/sim/scenario combinations with shaded acceptable ranges.
 
     Parameters
     ----------
     data
-        Dictionary mapping submission names to (values, run_ids) tuples.
+        DataFrame containing columns 'submission', 'run', and the
+        metric specified by metric_name.
+    submissions
+        List of submission names to include in the plot.
     metric_name
-        Name of the metric in the DataFrame
+        Name of the metric column to plot (must be a key in METRICS).
 
     Returns
     -------
-    fig
-        Matplotlib Figure object containing the strip plot.
-
-    Examples
-    --------
-    >>> fig = make_strip_plot(metric_data, "Bias", [-0.1, 0.1],
-    ...                       [[-0.02, 0.02], [-0.05, 0.05]])
+    Figure
+        Matplotlib Figure containing the strip plot.
     """
     fig, ax = plt.subplots(figsize=(11, 5))  # wider, and grab ax explicitly
 
@@ -319,7 +438,8 @@ def make_strip_plot(
     y_min, y_max = -0.5, n_y_labels - 0.5
 
     n_methods = len(submissions)
-    colors = plt.cm.tab20(np.linspace(0, 1, n_methods))[: n_methods]
+    cmap = plt.get_cmap('tab20')
+    colors = cmap(np.linspace(0, 1, n_methods))[:n_methods]
 
     # shaded bands first, so they sit under the points
     for metric_range in metric_ranges:
@@ -372,7 +492,20 @@ def extract_score_matrix(
     scores_df: pd.DataFrame,
     submisison: str,
 ) -> np.ndarray:
+    """Extract a score matrix for a single submission.
 
+    Parameters
+    ----------
+    scores_df
+        DataFrame of integer scores (as produced by build_scores_dataframe).
+    submisison
+        Name of the submission to extract.
+
+    Returns
+    -------
+    ndarray
+        2D array of shape (n_metrics, n_runs) with integer scores.
+    """
     mask = scores_df['submission'] == submisison
     sub_data = scores_df[mask]
 
@@ -388,7 +521,18 @@ def extract_score_matrix(
 def plot_score_matrix(
     score_matrix: np.ndarray,
 ) -> Figure:
-    
+    """Plot a score matrix as a color-coded image.
+
+    Parameters
+    ----------
+    score_matrix
+        2D array of integer scores, shape (n_metrics, n_runs).
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure with the score heatmap.
+    """
     fig, ax = plt.subplots(figsize=(8, 5))
 
     y_label_strings = list(METRICS.keys())
@@ -411,15 +555,28 @@ def get_all_scores(
     scores_df: pd.DataFrame,
     submisisons: list[str],
 ) -> pd.DataFrame:
+    """Compute aggregate scores per taskset for each submission.
 
+    Parameters
+    ----------
+    scores_df
+        DataFrame of integer scores (as produced by build_scores_dataframe).
+    submisisons
+        List of submission names to score.
+
+    Returns
+    -------
+    DataFrame
+        DataFrame with columns 'submission' and one column per taskset
+        containing normalized aggregate scores in [0, 1].
+    """
     n_tasksets = 2
     n_submissions = len(submisisons)
-    
-    out_dict = dict(
-        submission=[],
-    )
+
+    submissions_list: list[str] = []
+    taskset_scores: dict[str, np.ndarray] = {}
     for i in range(n_tasksets):
-        out_dict[f'taskset_{i}'] = np.zeros((n_submissions))
+        taskset_scores[f'taskset_{i}'] = np.zeros((n_submissions))
 
     for i, submission in enumerate(submisisons):
         score_matrix = extract_score_matrix(scores_df, submission)
@@ -427,7 +584,9 @@ def get_all_scores(
         for j in range(n_tasksets):
             the_slice = score_matrix[:,4*j:4*(j+1)]
             score = the_slice.sum() / (3.*the_slice.size)
-            out_dict[f'taskset_{j}'][i] = score
-        out_dict['submission'].append(submission)
+            taskset_scores[f'taskset_{j}'][i] = score
+        submissions_list.append(submission)
 
+    out_dict: dict[str, Any] = {'submission': submissions_list}
+    out_dict.update(taskset_scores)
     return pd.DataFrame(out_dict)

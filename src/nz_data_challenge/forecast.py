@@ -1,7 +1,8 @@
+"""Fisher matrix forecasting for n(z) challenge submissions."""
+
 import numpy as np
 
 from fisherA2Z.fisher_flex import FisherFlex, FisherFlexResult
-from fisherA2Z import nz_decomposition as nzd
 
 import qp
 from . import utils
@@ -55,10 +56,10 @@ def tomo_bins_effective_density(
     sim: str,
     scenario: str,
 ) -> np.ndarray:
-    """Compute the effective number density for the tomographic bins
+    """Compute the effective number density for the tomographic bins.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     n_objects
         Number of objects in each bin
     taskset
@@ -84,7 +85,31 @@ def fisher_forecast(
     mode: str, # '3x2pt' | '2x2pt' | 'cosmic_shear'
     truth:  dict[str, np.ndarray] | None,
 ) -> FisherFlexResult:
+    """Run a Fisher matrix forecast using n(z) estimates and their uncertainties.
 
+    Parameters
+    ----------
+    qp_nz_central
+        qp Ensemble containing the central n(z) estimates per tomographic bin.
+    qp_nz_samples
+        qp Ensemble containing bootstrap/sample realizations of the n(z),
+        with ancillary columns 'bin_idx' and 'i_realization'.
+    bhat_table
+        Dictionary with at least a 'tomo_bin_index' key mapping to an array
+        of bin assignments per object.
+    neff
+        Effective number density per tomographic bin (arcmin^-2).
+    mode
+        Analysis mode: '3x2pt', '2x2pt', or 'cosmic_shear'.
+    truth
+        If provided, dictionary with at least a 'redshift' key for
+        computing true n(z) distributions. If None, truth is not used.
+
+    Returns
+    -------
+    FisherFlexResult
+        Fisher forecast result object from fisherA2Z.
+    """
     n_bins = qp_nz_samples.ancil['bin_idx'].max() + 1
     n_samples = qp_nz_samples.ancil['i_realization'].max() + 1    
 
@@ -93,7 +118,7 @@ def fisher_forecast(
 
     if truth is not None:
         true_redshifts = truth['redshift']
-        true_nz_distributions = utils.get_true_nz_distributions(
+        utils.get_true_nz_distributions(
             true_redshifts,
             np.squeeze(bhat_table['tomo_bin_index']),
             FORECAST_Z_GRID,

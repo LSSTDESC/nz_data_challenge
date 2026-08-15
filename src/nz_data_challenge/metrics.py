@@ -150,10 +150,10 @@ def kl_divergence(p: ArrayLike, q: ArrayLike, eps: float = 1e-12) -> float:
 
 
 def total_information_loss(
-    true_dists: list[ArrayLike],
-    pred_dists: list[ArrayLike],
+    true_dists: list[ArrayLike] | NDArray,
+    pred_dists: list[ArrayLike] | NDArray,
     weights: ArrayLike | None = None,
-) -> tuple[float, NDArray[np.floating]]:
+) -> tuple[float, list]:
     """Compute the weighted sum of per-class KL divergences.
 
     Parameters

@@ -1,8 +1,10 @@
+"""Visualization utilities for inspecting public challenge data."""
 
 from pathlib import Path
 import numpy as np
 import tables_io
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 
 DDF_COLORS = [
@@ -29,7 +31,27 @@ def get_data(
     taskset: str,
     sim: str,
     scenario: str,
-):
+) -> tuple[dict, list[dict]]:
+    """Load WFD and DDF data files for a given configuration.
+
+    Parameters
+    ----------
+    public_data
+        Path to the public data directory.
+    taskset
+        Name of the taskset (e.g., 'taskset_1').
+    sim
+        Name of the simulation ('cardinal' or 'flagship').
+    scenario
+        Name of the scenario ('1yr' or '4yr').
+
+    Returns
+    -------
+    wfd
+        Dictionary of WFD catalog data.
+    ddf_list
+        List of 10 DDF catalog dictionaries.
+    """
     wfd_path = Path(public_data) / f"nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
     wfd = tables_io.read(wfd_path)
     ddf_path_list = [
@@ -39,7 +61,21 @@ def get_data(
     return wfd, ddf_list
     
 
-def draw_footprint(wfd, ddf_list):
+def draw_footprint(wfd: dict, ddf_list: list[dict]) -> Figure:
+    """Plot the sky footprint of WFD and DDF fields.
+
+    Parameters
+    ----------
+    wfd
+        WFD catalog dictionary with 'ra' and 'dec' keys.
+    ddf_list
+        List of DDF catalog dictionaries, each with 'ra' and 'dec' keys.
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure showing RA/Dec positions of WFD and DDF objects.
+    """
     fig = plt.figure(figsize=(8, 12))
     axes = fig.subplots(1,1)
     axes.scatter(wfd['ra'][::50], wfd['dec'][::50], s=1, color='black')
@@ -51,8 +87,21 @@ def draw_footprint(wfd, ddf_list):
     return fig
 
 
-def draw_rubin_mags(wfd, ddf):
-    mag_bins = np.linspace(MIN_MAG, MIN_MAG, MAG_N_BINS+1)
+def draw_rubin_mags(wfd: dict, ddf: dict) -> Figure:
+    """Plot Rubin LSST magnitude distributions for WFD and a DDF field.
+
+    Parameters
+    ----------
+    wfd
+        WFD catalog dictionary with 'mag_{band}_lsst' keys.
+    ddf
+        Single DDF catalog dictionary with 'mag_{band}_lsst' keys.
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure with histograms for each ugrizy band.
+    """
     fig = plt.figure(figsize=(8, 12))
     axes = fig.subplots(6,2)
     for i, band in enumerate('ugrizy'):
@@ -66,9 +115,21 @@ def draw_rubin_mags(wfd, ddf):
     return fig
 
 
-def draw_roman_mags(wfd, ddf):
-    colors = ['violet', 'indigo', 'blue']
-    mag_bins = np.linspace(MIN_MAG, MIN_MAG, MAG_N_BINS+1)
+def draw_roman_mags(wfd: dict, ddf: dict) -> Figure:
+    """Plot Roman magnitude distributions for WFD and a DDF field.
+
+    Parameters
+    ----------
+    wfd
+        WFD catalog dictionary with 'mag_{band}_roman' keys.
+    ddf
+        Single DDF catalog dictionary with 'mag_{band}_roman' keys.
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure with histograms for each YJH band.
+    """
     fig = plt.figure(figsize=(8, 6))
     axes = fig.subplots(3,2)
     for i, band in enumerate('YJH'):

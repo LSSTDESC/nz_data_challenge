@@ -9,6 +9,8 @@ from pathlib import Path
 import qp
 import tables_io
 
+from .utils import TASKSETS, SIMS, SCENARIOS
+
 
 def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
     """Download a tar file from a URL and extract its contents.
@@ -171,11 +173,27 @@ def check_submission(
     public_dir: str | Path,
     submit_dir: str | Path,
 ) -> None:
+    """Validate all files in a submission against the public test data.
 
+    Iterates over all taskset, simulation, and scenario combinations,
+    checking that n(z) and bin assignment files pass validation.
+
+    Parameters
+    ----------
+    public_dir
+        Path to the public data directory containing test WFD files.
+    submit_dir
+        Path to the submission directory containing n(z) and bhat files.
+
+    Raises
+    ------
+    RuntimeError
+        If any file fails validation checks performed by check_files.
+    """
     for taskset in TASKSETS:
-        for sim in SIM:
+        for sim in SIMS:
             for scenario in SCENARIOS:
-                wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"                
+                wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
                 nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
                 bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-                submit_utils.check_files(nz_file, bhat_file, wfd_file, 5)
+                check_files(nz_file, bhat_file, wfd_file, 5)
