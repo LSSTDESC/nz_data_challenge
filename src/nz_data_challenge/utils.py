@@ -13,8 +13,8 @@ SCENARIOS: list[str] = ['1yr', '4yr']
 
 # Tomographic bins we want people to use, by taskset
 TOMO_BIN_EDGES: dict[str, np.ndarray] = dict(
-    taskset_1 = np.array([0.  , 0.32, 0.47, 0.61, 0.78, 2.5 ]),
-    taskset_2 = np.array([0.  , 0.42, 0.64, 0.87, 1.2 , 2.5 ]),
+    taskset_1 = np.array([0.0, 0.32, 0.47, 0.61, 0.78, 2.5 ]),
+    taskset_2 = np.array([0.0, 0.42, 0.64, 0.87, 1.20, 2.5 ]),
 )   
 
 # Binning for z estimation plots, by taskset
