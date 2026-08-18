@@ -35,7 +35,11 @@ models/
 *.tar.gz
 nb/Sandbox.ipynb
 nb/submission
+nb/submission_test
 nb/results
+nb/results_test
+docs_results/_build
+docs_results/results
 
 
 # PyInstaller
