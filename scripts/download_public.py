@@ -1,8 +1,5 @@
 import os
-from Nz_data_challenge import submit_utils
-
-# don't change these
-PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public_test.tgz"
+from nz_data_challenge import submit_utils
 
 
 def setup_public_area() -> None:
@@ -14,7 +11,7 @@ def setup_public_area() -> None:
         # Note that the tar file has "public" as top level directory
         # so we if we extract to "tests" the files actually end
         # up in "tests/public"
-        submit_utils.download_and_extract_tar(PUBLIC_URL, ".")
+        submit_utils.download_and_extract_tar(submit_utils.PUBLIC_URL, ".")
 
 
 if __name__ == '__main__':

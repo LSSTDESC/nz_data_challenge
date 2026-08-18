@@ -12,6 +12,9 @@ import tables_io
 
 from .utils import TASKSETS, SIMS, SCENARIOS, TOMO_BIN_EDGES
 
+# don't change this
+PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public_nz.tgz"
+
 
 def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
     """Download a tar file from a URL and extract its contents.

@@ -2,21 +2,19 @@ import os
 import sys
 from nz_data_challenge import submit_utils
 
-# don't change these
-PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/NZ/data_challenge/public.tgz"
 
 
 def setup_public_area() -> None:
     """
     A function download the public data
     """
-    print(f"copying data from {PUBLIC_URL}\n")
+    print(f"copying data from {submit_utils.PUBLIC_URL}\n")
     
     if not os.path.exists("public"):
         # Note that the tar file has "public" as top level directory
         # so we if we extract to "tests" the files actually end
         # up in "tests/public"
-        submit_utils.download_and_extract_tar(PUBLIC_URL, ".")
+        submit_utils.download_and_extract_tar(submit_utils.PUBLIC_URL, ".")
 
 
 def copy_txt_with_replacement(template_path, output_path, old_string, new_string):
