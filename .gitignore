@@ -30,6 +30,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 models/
+models_test/
 *.hdf5
 *.tgz
 *.tar.gz
