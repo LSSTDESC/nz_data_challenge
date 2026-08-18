@@ -6,10 +6,11 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
+import numpy as np
 import qp
 import tables_io
 
-from .utils import TASKSETS, SIMS, SCENARIOS
+from .utils import TASKSETS, SIMS, SCENARIOS, TOMO_BIN_EDGES
 
 
 def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
@@ -54,7 +55,7 @@ def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
 def check_files(
     nz_file: str | Path,
     bhat_file: str | Path,
-    test_file: str | Path,
+    test_ids: set,
     n_tomo_bins: int | None = None,
 ) -> None:
     """Validate photo-z submission files against test data requirements.
@@ -71,9 +72,8 @@ def check_files(
     bhat_file
         Path to the bhat (bin assignment) submission file to validate.
         Must be in tables_io readable format.
-    test_file
-        Path to the test file containing reference object IDs. Must be
-        readable by tables_io.
+    test_ids
+        Set of object_ids we expect to find.
     n_tomo_bins
         If set, requires that nz_file have this many tomographic bins.
 
@@ -153,24 +153,15 @@ def check_files(
             f" != sum of n_objects in n(z) file ({n_objects.sum()})"
         )
 
-    try:
-        test_data = tables_io.read(test_file)
-        test_ids = set(test_data["object_id"])
-    except Exception as exc:
-        raise RuntimeError(
-            f"Failed to read test file {test_file}: {exc}"
-        ) from exc
-
     if submit_ids != test_ids:
         diff_set = submit_ids - test_ids
         raise RuntimeError(
             f"Object ids in bhat (bin assignment) file {bhat_file}"
-            f" do not match {test_file}: {diff_set}"
+            f" do not match expected test ids: {diff_set}"
         )
 
 
 def check_submission(
-    public_dir: str | Path,
     submit_dir: str | Path,
 ) -> None:
     """Validate all files in a submission against the public test data.
@@ -180,8 +171,6 @@ def check_submission(
 
     Parameters
     ----------
-    public_dir
-        Path to the public data directory containing test WFD files.
     submit_dir
         Path to the submission directory containing n(z) and bhat files.
 
@@ -190,10 +179,14 @@ def check_submission(
     RuntimeError
         If any file fails validation checks performed by check_files.
     """
+    id_offset = 0
     for taskset in TASKSETS:
+        tomo_bin_edges = TOMO_BIN_EDGES[taskset]
+        n_tomo_bins = len(tomo_bin_edges) - 1
         for sim in SIMS:
-            for scenario in SCENARIOS:
-                wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
+            for scenario in SCENARIOS:                
                 nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
                 bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-                check_files(nz_file, bhat_file, wfd_file, 5)
+                test_ids = set(np.arange(id_offset, id_offset+1_000_000).astype(int))
+                check_files(nz_file, bhat_file, test_ids, n_tomo_bins)
+                id_offset += 1_000_000

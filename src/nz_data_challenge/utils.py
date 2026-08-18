@@ -4,9 +4,35 @@ import qp
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-TASKSETS = ['taskset_1', 'taskset_2']
-SIMS = ['cardinal', 'flagship']
-SCENARIOS = ['1yr', '4yr']
+# Tasksets defined in the challenge so far
+TASKSETS: list[str] = ['taskset_1', 'taskset_2']
+# Types of simulations used
+SIMS: list[str] = ['cardinal', 'flagship']
+# Scenarios considered
+SCENARIOS: list[str] = ['1yr', '4yr']
+
+# Tomographic bins we want people to use, by taskset
+TOMO_BIN_EDGES: dict[str, np.ndarray] = dict(
+    taskset_1 = np.array([0.  , 0.32, 0.47, 0.61, 0.78, 2.5 ]),
+    taskset_2 = np.array([0.  , 0.42, 0.64, 0.87, 1.2 , 2.5 ]),
+)   
+
+# Binning for z estimation plots, by taskset
+Z_MIN_TASKSET_1 = 0.
+Z_MAX_TASKSET_1 = 1.5
+NZ_BINS_TASKSET_1 = 150
+Z_BIN_EDGES_TASKSET_1 = np.linspace(Z_MIN_TASKSET_1, Z_MAX_TASKSET_1, NZ_BINS_TASKSET_1 + 1)
+
+Z_MIN_TASKSET_2 = 0.
+Z_MAX_TASKSET_2 = 3.0
+NZ_BINS_TASKSET_2 = 150
+Z_BIN_EDGES_TASKSET_2 = np.linspace(Z_MIN_TASKSET_2, Z_MAX_TASKSET_2, NZ_BINS_TASKSET_2 + 1)
+
+Z_BIN_EDGES: dict[str, np.ndarray] = dict(
+    taskset_1=Z_BIN_EDGES_TASKSET_1,
+    taskset_2=Z_BIN_EDGES_TASKSET_2,
+)    
+
 
 
 def histogram_stats(

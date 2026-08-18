@@ -1,6 +1,11 @@
-"""Evaluation pipeline for n(z) challenge submissions."""
+"""Evaluation pipeline tools for n(z) challenge submissions."""
 
+import glob
+import os
+import subprocess
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -8,17 +13,18 @@ import pandas as pd
 import qp
 import tables_io
 import yaml
+from jinja2 import Template
 
-from typing import Any
-
-from . import metrics, utils
+from . import metrics, utils, forecast
 from .utils import TASKSETS, SIMS, SCENARIOS
 
+# Colors for n(z) plots
 TOMO_BIN_COLORS = [
     'violet', 'indigo', 'magenta', 'blue', 'cyan',
     'green', 'yellow', 'orange', 'red', 'gray',
 ]
 
+# Performance merics, with plotting info and scoring criteria
 METRICS: dict[str, dict[str, Any]] = dict(
     accuracy=dict(
         label='Bin Assignment Accuracy',
@@ -62,11 +68,37 @@ METRICS: dict[str, dict[str, Any]] = dict(
     ),
 )
 
-z_min = 0
-z_max = 1.5
-n_grid_points = 151
-grid_edges = np.linspace(z_min, z_max, n_grid_points)
-grid_centers = 0.5*(grid_edges[0:-1]+grid_edges[1:])
+
+def get_submissions(accept_dir: str = "../accepted") -> list[str]:
+    """
+    Retrieve list of submission names from test files in the accepted directory.
+
+    Scans the specified directory for Python test files matching the pattern
+    'test_*.py' and extracts submission identifiers.
+
+    Parameters
+    ----------
+    accept_dir
+        Path to directory containing accepted submission test files.
+        Default is "../accepted".
+
+    Returns
+    -------
+    submissions
+        List of submission identifier strings extracted from filenames.
+
+    Examples
+    --------
+    >>> submissions = get_submissions("./accepted")
+    >>> print(submissions)
+    ['baseline', 'improved_algo', 'fast_estimator']
+    """
+    test_string = f"{accept_dir}/test_"
+    submissions = [
+        f.replace(test_string, "").replace(".py", "")
+        for f in glob.glob(f"{test_string}*.py")
+    ]
+    return submissions
 
 
 def evaluate_bin_assignments(
@@ -211,12 +243,52 @@ def plot_nz_data(
     return fig
 
 
+def plot_nz_mean_and_rms(
+    true_distributions: np.ndarray,
+    nz_distributions: np.ndarray,
+    grid_edges: np.ndarray,
+) -> Figure:
+    """Plot estimated and true n(z) distributions for all tomographic bins.
+
+    Parameters
+    ----------
+    true_distributions
+        Array of true n(z) distributions per bin.
+    nz_distributions
+        Array of estimated n(z) distributions per bin.
+    grid_edges
+        Redshift bin edges for stats evaluation
+
+    Returns
+    -------
+    Figure
+        Matplotlib Figure mean and rms
+    """
+    fig = plt.figure(figsize=(6,6))
+    axes = fig.subplots(1, 1)
+
+    estimate_stats = utils.histogram_stats_2d(nz_distributions, grid_edges)
+    true_stats = utils.histogram_stats_2d(true_distributions, grid_edges)
+
+    axes.scatter(true_stats['mean'], estimate_stats['mean'] - true_stats['mean'], label='Delta mean')
+    axes.scatter(true_stats['mean'], estimate_stats['std'] - true_stats['std'], label='Delta rms')
+    
+    axes.set_xlabel('z')
+    axes.set_ylabel(r'$\Delta$ Statistic')
+
+    axes.set_ylim(-0.25, 0.25)
+    axes.set_xlim()
+
+    axes.legend()
+    fig.tight_layout()
+    return fig
+
+
 def evaluate_submission(
     submit_dir: str | Path,
     public_dir: str | Path,
     truth_dir: str | Path,
     results_dir: str | Path,
-    tomo_bin_edges: np.ndarray,
     suffix: str = "wfd",
 ) -> None:
     """Run full evaluation of a submission across all tasksets, sims, and scenarios.
@@ -234,14 +306,20 @@ def evaluate_submission(
         Path to the truth directory containing true redshifts.
     results_dir
         Path to the output directory for plots and results YAML.
-    tomo_bin_edges
-        Array of tomographic bin edges for assigning true bins.
     suffix
         File suffix identifier (default 'wfd').
     """
     full_output: dict[str, dict[str, Any]] = {}
 
+    Path(results_dir).mkdir(parents=True, exist_ok=True)
+
     for taskset in TASKSETS:
+
+        tomo_bin_edges = utils.TOMO_BIN_EDGES[taskset]
+        grid_edges = utils.Z_BIN_EDGES[taskset]
+        grid_centers = 0.5*(grid_edges[0:-1]+grid_edges[1:])
+        n_tomo_bins = len(tomo_bin_edges) - 1
+        
         for sim in SIMS:
             for scenario in SCENARIOS:
                 key = f"{taskset}_{sim}_{scenario}"
@@ -258,24 +336,94 @@ def evaluate_submission(
                 bin_assignments = np.squeeze(bhat_data['tomo_bin_index'])
                 true_assignments = utils.get_true_bin_assignments(true_redshifts, tomo_bin_edges)
 
-                nz_distributions = utils.get_nz_distributions(nz_estimates, grid_centers, 5)
-                true_distributions = utils.get_true_nz_distributions(true_redshifts, bin_assignments, grid_edges, 5)
+                nz_distributions = utils.get_nz_distributions(nz_estimates, grid_centers, n_tomo_bins)
+                true_distributions = utils.get_true_nz_distributions(true_redshifts, bin_assignments, grid_edges, n_tomo_bins)
 
+                counts = np.squeeze(nz_estimates.ancil['n_objects'])
+                neff = forecast.tomo_bins_effective_density(counts, taskset, sim, scenario)
+
+                res_cs, bias_res_cs = forecast.fisher_bias_forecast(
+                    nz_estimates,
+                    bhat_data,
+                    neff,
+                    mode='cosmic_shear',
+                    truth=truth,
+                )
+
+                res_3x2pt, bias_res_3x2pt = forecast.fisher_bias_forecast(
+                    nz_estimates,
+                    bhat_data,
+                    neff,
+                    mode='3x2pt',
+                    truth=truth,
+                )
+                
                 full_output[key] = evaluate_bin_assignments(true_assignments, bin_assignments)
                 full_output[key].update(
                     **evaluate_distributions(true_distributions, nz_distributions, grid_edges, nz_estimates.ancil['n_objects'])
                 )
+                full_output[key].update(
+                    wowa_fom_cs=res_cs.fom('w_0', 'w_a'),
+                    wowa_fom_3x2pt=res_3x2pt.fom('w_0', 'w_a'),                    
+                )
 
-                fig_confusion = plot_confusion_matrix(true_assignments, bin_assignments, 5)
+                fig_confusion = plot_confusion_matrix(true_assignments, bin_assignments, n_tomo_bins)
                 fig_nz = plot_nz_data(true_distributions, nz_distributions, grid_edges)
+                fig_mean_and_rms = plot_nz_mean_and_rms(true_distributions, nz_distributions, grid_edges)
+
+                corner_params = ["omega_m", "sigma_8", "w_0", "w_a"]
+
+                fig_cs = res_cs.corner(corner_params, color="C3", label="Cosmic Shear")
+                fig_cs.legend(loc="upper right", fontsize=10)
+                bias_res_cs.corner_arrows(corner_params, fig=fig_cs, shifted_contour=True, color="C1")
+
+                fig_3x2pt = res_cs.corner(corner_params, color="C3", label="3x2pt")
+                fig_3x2pt.legend(loc="upper right", fontsize=10)
+                bias_res_3x2pt.corner_arrows(corner_params, fig=fig_3x2pt, shifted_contour=True, color="C1")
 
                 fig_confusion.savefig(f"{results_dir}/{key}_confusion_matrix.png")
                 fig_nz.savefig(f"{results_dir}/{key}_nz_distributions.png")
+                fig_mean_and_rms.savefig(f"{results_dir}/{key}_nz_mean_and_rms.png")
 
+                fig_cs.savefig(f"{results_dir}/{key}_forecast_cosmic_shear.png")
+                fig_3x2pt.savefig(f"{results_dir}/{key}_forecast_3x2pt.png")
+                
+                
     with open(f"{results_dir}/full_results.yaml", "w") as fout:
-        yaml.dump(full_output, fout)
+        yaml.dump(full_output, fout)        
 
 
+def summarize_submissions(
+    submissions: list[str],
+    results_dir: str | Path,
+) -> None:
+
+    dataframe = build_summary_stats_dataframe(
+        submissions,
+        results_dir,
+    )
+
+    scores_df = build_scores_dataframe(dataframe)
+    all_scores = get_all_scores(scores_df, submissions)
+    
+    # first do the per-submission plots
+    for submission in submissions:
+        score_matrix = extract_score_matrix(scores_df, submission)
+        fig_score_matrix = plot_score_matrix(score_matrix)
+        fig_score_matrix.savefig(f"{results_dir}/{submission}/score_matrix.png")
+
+        for strip_plot in METRICS:
+            the_fig = make_strip_plot(dataframe, [submission], strip_plot)
+            the_fig.savefig(f"{results_dir}/{submission}/{strip_plot}.png")
+
+    # Now do the top-level version
+    for strip_plot in METRICS:
+        the_fig = make_strip_plot(dataframe, submissions, strip_plot)
+        the_fig.savefig(f"{results_dir}/{strip_plot}.png")
+
+    all_scores.to_csv(f"{results_dir}/all_scores.csv", index=False)
+        
+        
 RUN_LABELS: list[str] = []
 RUN_LABEL_DICT: dict[str, int] = {}
 
@@ -590,3 +738,143 @@ def get_all_scores(
     out_dict: dict[str, Any] = {'submission': submissions_list}
     out_dict.update(taskset_scores)
     return pd.DataFrame(out_dict)
+
+
+def make_submission_summary_rst(
+    submissions: list[str],
+    results_dir: str | Path,
+    template_file: str | Path,
+) -> None:
+    """Render RST summary pages for each submission from a Jinja2 template.
+
+    Parameters
+    ----------
+    results_dir : str
+        Base directory for output RST files.
+    submissions : list[str]
+        List of submission identifiers.
+    template_file : str
+        Path to the Jinja2 RST template file.
+    """
+    with open(template_file, "r") as f:
+        template = Template(f.read())
+
+    base_path = Path(results_dir)
+
+    # Generate RST file for each directory
+    for submission_name in submissions:
+        # Render template
+        content = template.render(dir_name=submission_name)
+
+        # Write to file
+        output_path = base_path / Path(submission_name) / "index.rst"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, "w") as f:
+            f.write(content)
+
+            print(f"Generated: {output_path}")
+
+
+def evaluate_all_submissions(
+    submissions: list[str],
+    submit_top_dir: str | Path,
+    public_dir: str | Path,
+    truth_dir: str | Path | None,    
+    results_top_dir: str | Path,
+    template_jinja_file: str | Path,
+    suffix: str="wfd",
+) -> None:
+
+    Path(submit_top_dir).mkdir(parents=True, exist_ok=True)
+    Path(results_top_dir).mkdir(parents=True, exist_ok=True)
+
+    if truth_dir is None:
+        raise ValueError("truth_dir must not be None")
+
+    for submission in submissions:
+        submit_dir = f'{submit_top_dir}/{submission}'
+        results_dir = f'{results_top_dir}/{submission}'
+        evaluate_submission(
+            submit_dir,
+            public_dir,
+            truth_dir,
+            results_dir,
+            suffix=suffix,
+        )
+        
+    summarize_submissions(
+        submissions,
+        results_top_dir,
+    )
+
+    make_submission_summary_rst(
+        submissions,
+        results_top_dir,
+        template_file=template_jinja_file,
+    )
+
+
+def run_submission(
+    submission_name: str, results_dir: str, *, force: bool = False
+) -> None:
+    """Run the code for a submission.
+
+    Parameters
+    ----------
+    submission_name : str
+        Name identifier for the submission.
+    results_dir : str
+        Path to the directory where results will be stored.
+    """
+
+    if os.environ.get("SKIP_RUN"):
+        return
+
+    if os.path.exists(os.path.join(results_dir, "pytest.log")) and not force:
+        return
+
+    if not os.environ.get("SKIP_INSTALL"):
+        try:
+            subprocess.run(
+                ["pip", "install", "-r", f"requirements_{submission_name}.txt"],
+                check=True,
+            )
+        except Exception:
+            pass
+
+    os.environ["NO_TEARDOWN"] = "1"
+
+    try:
+        os.makedirs(results_dir)
+    except Exception:
+        pass
+
+    if not os.environ.get("SKIP_PYTEST"):
+        output = subprocess.run(
+            ["py.test", f"tests/test_{submission_name}.py"],
+            check=True,
+            capture_output=True,
+        )
+
+        with open(
+            os.path.join(results_dir, "pytest.log"), "w", encoding="utf-8"
+        ) as fout:
+            fout.write(output.stdout.decode())
+
+
+def run_submissions(
+    submissions: list[str] | None,
+    results_top_dir: str,
+    accepeted_dir: str,
+    *,
+    force: bool = False,
+) -> None:
+
+    if submissions is None:
+        submissions = get_submissions(accepeted_dir)
+
+    for submission in submissions:
+        run_submission(submission, f"{results_top_dir}/{submission}", force=force)
+
+    
