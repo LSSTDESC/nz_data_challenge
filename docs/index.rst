@@ -952,3 +952,8 @@ catalogs to the files released with the challenge.
    :width: 45.0%
 .. |image7| image:: figures/flux_contamination.png
    :width: 45.0%
+
+
+.. include:: validation.rst        
+
+	   

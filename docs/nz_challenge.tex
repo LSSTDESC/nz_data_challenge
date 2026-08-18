@@ -258,7 +258,7 @@ the magnitude columns to signify non-detections.
   challenge & Challenge associated with file (``nz\_challenge'') \\
   taskset & Task set associated with file (e.g., ``taskset\_1'') \\
   simulation & Simulation used to produce file (``cardinal'' or ``flagship'') \\
-  label & File label (e.g., ``ddf\_03'', ``wfd) \\
+  label & File label (e.g., ``ddf\_03'', ``wfd'') \\
   scenario & Data scenario (e.g., ``1yr'', ``4yr''') \\
 \hline\hline
 \end{tabular}
@@ -827,20 +827,21 @@ The subtasks in this task set are:
 \end{enumerate}
   
 
-\subsection{Task set 3: Assign objects to arbitrary tomographic bins
-  and estimate ensemble PDFs using non-representative
-  samples}
+\subsection{Taskset 3: Assign objects to fixed tomographic bins
+  and estimate ensemble PDFs and the uncertainty on those PDFs from cosmic-variance
+  using non-representative samples}
 
-This task is almost identical to taskset 2, the only difference is that you can devise
-and your own tomographic binning schemes.
+This task is almost identical to taskset 2, the only difference is that we are asking you to include estimates
+on the uncertainty of the 
 
 This taskset re-uses the files form taskset 2.
 
 The subtasks in this task set are:
 
 \begin{enumerate}
-  \item{Assign each object in this file to a tomographic,  estimate the $n(z)$ distribution for each bin.
-      provide bin assignemtns and estimates as part of the downloadable \texttt{tar} file.}
+\item{Assign each object in this file to a tomographic,  estimate the $n(z)$ distribution for each bin and provide
+    a set of ``equally'' probably $n(z)$ realizations for each tomographic bin that properly account for the effects of
+    cosmic variance.    Then provide bin assignments, estimates and extra realizations as part of the downloadable \texttt{tar} file.}
   \item{Provide pre-trained models appropriate to each of the training
       files and implement a Python function (\texttt{run\_taskset\_3\_estimation\_only}) to use those
       pre-trained models to assign to assign each object in this file to a tomographic bin and then estimate the $n(z)$
@@ -1028,7 +1029,7 @@ do\_04\_subselect & rail-project subsample & Make train/test files from catalogs
 
 \newpage
 
-\bibliography{pz_challenge.bib}
+\bibliography{nz_challenge.bib}
 
 \end{document}
 
