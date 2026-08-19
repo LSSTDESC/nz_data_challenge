@@ -55,7 +55,7 @@ def get_data(
     wfd_path = Path(public_data) / f"nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
     wfd = tables_io.read(wfd_path)
     ddf_path_list = [
-        Path(public_data) / f"nz_challenge_{taskset}_{sim}_{scenario}_ddf_{i:02}.hdf5" for i in range(3)
+        Path(public_data) / f"nz_challenge_{taskset}_{sim}_{scenario}_ddf_{i:02}.hdf5" for i in range(5)
     ]
     ddf_list = [tables_io.read(ddf_path) for ddf_path in ddf_path_list]
     return wfd, ddf_list

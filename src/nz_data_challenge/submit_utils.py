@@ -12,11 +12,23 @@ import tables_io
 
 from .utils import TASKSETS, SIMS, SCENARIOS, TOMO_BIN_EDGES
 
+# This is here in case we can't update the data at NERSC
+NERSC_IS_OUTDATED = True
+
 # don't change this
-PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public_nz.tgz"
+if NERSC_IS_OUTDATED:
+    PUBLIC_URL: str = "https://s3df.slac.stanford.edu/people/echarles/data_challenge/public_nz.tgz"
+    BACKUP_URL: str | None = None
+else:
+    PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public_nz.tgz"
+    BACKUP_URL: str | None = "https://s3df.slac.stanford.edu/people/echarles/data_challenge/public_nz.tgz"
 
 
-def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
+def download_and_extract_tar(
+    url: str,
+    extract_to: str | Path = ".",
+    backup_url: str | None = None,
+) -> None:
     """Download a tar file from a URL and extract its contents.
 
     Parameters
@@ -27,6 +39,9 @@ def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
     extract_to
         Directory path where the contents will be extracted.
         Default is the current directory ('.').
+    backup_url
+        if provided, a backup URL of the tar file to download. Supports .tar, .tar.gz, .tgz,
+        .tar.bz2, and .tar.xz formats.
 
     Raises
     ------
@@ -46,7 +61,12 @@ def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
     """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".tar") as tmp_file:
         tmp_path: str = tmp_file.name
-        urllib.request.urlretrieve(url, tmp_path)
+        try:
+            urllib.request.urlretrieve(url, tmp_path)
+        except Exception:
+            if backup_url is None:
+                raise
+            urllib.request.urlretrieve(url, tmp_path)
 
     try:
         with tarfile.open(tmp_path, "r:*") as tar:
@@ -55,6 +75,19 @@ def download_and_extract_tar(url: str, extract_to: str | Path = ".") -> None:
         os.unlink(tmp_path)
 
 
+def setup_public_area() -> None:
+    """
+    A function download the public data
+    """
+    print(f"copying data from {PUBLIC_URL} (or backup: {BACKUP_URL})\n")
+
+    if not os.path.exists("public"):
+        # Note that the tar file has "public" as top level directory
+        # so we if we extract to "tests" the files actually end
+        # up in "tests/public"
+        submit_utils.download_and_extract_tar(PUBLIC_URL, ".", BACKUP_URL)
+
+        
 def check_files(
     nz_file: str | Path,
     bhat_file: str | Path,

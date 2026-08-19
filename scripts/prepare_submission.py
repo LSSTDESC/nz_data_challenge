@@ -3,20 +3,6 @@ import sys
 from nz_data_challenge import submit_utils
 
 
-
-def setup_public_area() -> None:
-    """
-    A function download the public data
-    """
-    print(f"copying data from {submit_utils.PUBLIC_URL}\n")
-    
-    if not os.path.exists("public"):
-        # Note that the tar file has "public" as top level directory
-        # so we if we extract to "tests" the files actually end
-        # up in "tests/public"
-        submit_utils.download_and_extract_tar(submit_utils.PUBLIC_URL, ".")
-
-
 def copy_txt_with_replacement(template_path, output_path, old_string, new_string):
     """
     Copy a text file to an output file and replace occurrences of a string.
@@ -131,7 +117,7 @@ if __name__ == '__main__':
         submission_name        
     )
 
-    setup_public_area()
+    submit_utils.setup_public_area()
 
     print(f"Successfully set up nz_data_challenge for a submission called {submission_name}\n")
     print(f"You should probably run the command 'git checkout -b submit/{submission_name}'")
