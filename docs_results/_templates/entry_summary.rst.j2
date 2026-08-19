@@ -1,0 +1,230 @@
+{{ '-' * (16 + dir_name|length) }}
+Results for {{ dir_name }}
+{{ '-' * (16 + dir_name|length) }}
+
+
+Scoring Summary for {{ dir_name }}
+{{ '-' * (20 + dir_name|length) }}
+
+.. list-table:: Image Gallery
+   :widths: 50
+   :header-rows: 1
+   :class: full-width-table
+
+   * - **Score Matrix**
+   * - .. image:: score_matrix.png
+          :width: 200px
+          :align: center
+
+
+Summary of bin assignment metrics for {{ dir_name }}
+{{ '-' * (38 + dir_name|length) }}
+
+.. list-table:: Image Gallery
+   :widths: 20 20 20 20 20
+   :header-rows: 1
+   :class: full-width-table
+
+   * - **Accuracy**
+     - **Balanced Accuracy**
+     - **Cohen's Kappa**
+     - **Mutual Information**
+     - **Log information loss**     
+   * - .. image:: accuracy.png
+          :width: 200px
+          :align: center
+     - .. image:: balanced_accuracy.png
+          :width: 200px
+          :align: center
+     - .. image:: cohens_kappa.png
+          :width: 200px
+          :align: center
+     - .. image:: mutual_info.png
+          :width: 200px
+          :align: center
+     - .. image:: log_loss.png
+          :width: 200px
+          :align: center
+
+
+Summary of distribution metrics for {{ dir_name }}
+{{ '-' * (36 + dir_name|length) }}
+
+.. list-table:: Image Gallery
+   :widths: 30 30 30
+   :header-rows: 1
+   :class: full-width-table
+	   
+   * - "Total Information Loss"
+     - "Delta Mean of bins added in quadrature "
+     - "Delta RMS of bins added in quadrature"
+   * - .. image:: total_information_loss.png
+          :width: 200px
+          :align: center
+     - .. image:: rms0_delta_mean.png
+          :width: 200px
+          :align: center
+     - .. image:: rms0_delta_std.png
+          :width: 200px
+          :align: center
+
+
+Results for Taskset 1 for {{ dir_name }}
+{{ '-' * (27 + dir_name|length) }}
+
+.. list-table:: Image Gallery
+   :widths: 20 20 20 20 20
+   :header-rows: 1
+   :class: full-width-table
+	   
+   * - 
+     - "Cardinal Simulations, 1yr LSST Depth"
+     - "Flagship Simulations, 1yr LSST Depth"
+     - "Cardinal Simulations, 4yr LSST Depth"
+     - "Cardinal Simulations, 4yr LSST Depth"
+   * - **Confusion Matrix**
+     - .. image:: taskset_1_cardinal_1yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_1yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_cardinal_4yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_1yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+   * - **N(z) distributions**
+     - .. image:: taskset_1_cardinal_1yr_nz_distributions.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_1yr_nz_distributions.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_cardinal_4yr_nz_distributions.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_4yr_nz_distributions.png
+          :width: 150px
+          :align: center
+   * - **Mean and RMS by bin**
+     - .. image:: taskset_1_cardinal_1yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_1yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_cardinal_4yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_4yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+   * - **WoWa forecast cosmic shear**
+     - .. image:: taskset_1_cardinal_1yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_1yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_cardinal_4yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_4yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+   * - **WoWa forecast 3x2pt**
+     - .. image:: taskset_1_cardinal_1yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_1yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_cardinal_4yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_1_flagship_4yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+
+
+Results for Taskset 2 for {{ dir_name }}
+{{ '-' * (27 + dir_name|length) }}
+
+.. list-table:: Image Gallery
+   :widths: 20 20 20 20 20
+   :header-rows: 1
+   :class: full-width-table
+	   
+   * - 
+     - "Cardinal Simulations, 1yr LSST Depth"
+     - "Flagship Simulations, 1yr LSST Depth"
+     - "Cardinal Simulations, 4yr LSST Depth"
+     - "Cardinal Simulations, 4yr LSST Depth"
+   * - **Confusion Matrix**
+     - .. image:: taskset_2_cardinal_1yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_1yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_cardinal_4yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_1yr_confusion_matrix.png
+          :width: 150px
+          :align: center
+   * - **N(z) distributions**
+     - .. image:: taskset_2_cardinal_1yr_nz_distributions.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_1yr_nz_distributions.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_cardinal_4yr_nz_distributions.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_4yr_nz_distributions.png
+          :width: 150px
+          :align: center
+   * - **Mean and RMS by bin**
+     - .. image:: taskset_2_cardinal_1yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_1yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_cardinal_4yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_4yr_nz_mean_and_rms.png
+          :width: 150px
+          :align: center
+   * - **WoWa forecast cosmic shear**
+     - .. image:: taskset_2_cardinal_1yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_1yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_cardinal_4yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_4yr_forecast_cosmic_shear.png
+          :width: 150px
+          :align: center
+   * - **WoWa forecast 3x2pt**
+     - .. image:: taskset_2_cardinal_1yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_1yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_cardinal_4yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+     - .. image:: taskset_2_flagship_4yr_forecast_3x2pt.png
+          :width: 150px
+          :align: center
+

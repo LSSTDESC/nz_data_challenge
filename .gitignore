@@ -2,13 +2,16 @@
 __pycache__/
 *.py[codz]
 *$py.class
+.DS_Store
 
 # C extensions
 *.so
 
 # Distribution / packaging
 .Python
+_version.py
 build/
+public/
 develop-eggs/
 dist/
 downloads/
@@ -20,11 +23,25 @@ parts/
 sdist/
 var/
 wheels/
+submissions/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+models/
+models_test/
+*.hdf5
+*.tgz
+*.tar.gz
+nb/Sandbox.ipynb
+nb/submission
+nb/submission_test
+nb/results
+nb/results_test
+docs_results/_build
+docs_results/results
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
