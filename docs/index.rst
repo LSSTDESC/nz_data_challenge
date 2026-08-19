@@ -43,20 +43,23 @@ Introduction
 ============
 
 Redshift inference is a key element of many DESC science goals, and
-redshift uncertainty is one of the leading contributors to overall
+redshift uncertainty is one of the leading contributors to the overall
 uncertainty on cosmological models from imaging survey data. Precursor
 surveys took a variety of approaches to this problem, accounting for
 differences in underlying data as well as modeling approaches. In all
-cases, redshift uncertainty was significantly larger than the DESC
-Science Requirements listed in the LSST DESC Science Requirements
-Document.
+cases, redshift uncertainty was significantly larger than the
+requirements listed in the LSST DESC Science Requirements Document.
 
 This state of the art motivates a data challenge to characterize and
 improve existing methods, as well as to provide infrastructure for the
 development of improved methods. Overall, this requires generating
-uniform input catalogs to use and infrastructure for comparing output
-redshift posteriors for ensembles to each other and to simulated truth
-catalogs.
+uniform input catalogs and infrastructure for comparing output redshift
+posteriors for ensembles to each other and to simulated truth catalogs.
+
+Estimating ensemble-level :math:`n(z)` distributions differs from
+measuring per-object :math:`p(z)` distributions in many ways. Depending
+on the method, estimating :math:`n(z)` distributions may or may not
+include :math:`p(z)` estimation along the way.
 
 .. _redshift_basics:
 
@@ -117,13 +120,13 @@ various algorithms are to be used for cutting-edge analysis based on how
 well they perform on the various tasks. Readiness will be evaluated on a
 few different fronts: 1) Does the algorithm meet performance
 requirements? 2) Is it robust, flexible, and relatively easy to use on
-different datasets? 3) Is it scalable up to the scales we will need to
-use it at?
+different datasets? 3) Is it scalable to the scales we will need?
 
 This document and the associated web pages describe the data being
 provided to participants, the tasks they will be asked to perform, the
-expected format for submission and the metrics by which the algorithm
+expected format for submissions, and the metrics by which algorithm
 readiness will be evaluated.
+
 
 Scope and Timeline
 ------------------
@@ -139,6 +142,7 @@ redshifts in each bin, and will launch in September 2026.
 Preliminary results will be released in January, 2027, with a technical
 note summarizing those results to follow shortly thereafter and a
 comprehensive journal publication to follow later.
+
 
 Installing and setting up the ``nz_data_challenge`` package
 -----------------------------------------------------------
@@ -233,6 +237,21 @@ magnitude columns to signify non-detections.
       scenario   Data scenario (e.g., “1yr”, “4yr”’)
       ========== ==========================================================
 
+
+.. container::
+   :name: tab:file_types
+
+   .. table:: File Types. The “ddf_00” fields have reference redshifts from all spectroscopic samples. The other “ddf” fields emulate the incomplete coverage coming only from the “DESI” samples.
+
+      ====== ===========================================================
+      Label  Description
+      ====== ===========================================================
+      wfd    “Wide, Fast, Deep”, emulating LSST and Roman survey data
+      ddf_00 “Deep-drilling field 0”, emulating COSMOS deep field.
+      ddf_0X “Deep-drilling field 1,2,3,4”, emulating other deep fields.
+      ====== ===========================================================
+
+      
 .. container::
    :name: tab:columns
 
@@ -250,6 +269,7 @@ magnitude columns to signify non-detections.
       mag_{band}_roman     Magnitude in Roman {band}
       mag_{band}_roman_err Magnitude uncertainty in Roman {band}
       ==================== =====================================
+
 
 We note that the ``table-io`` package  :raw-latex:`\cite{tables_io}`
 installed with ``nz_data_challenge`` provided a command line interface
@@ -275,40 +295,100 @@ The challenge is organized as a series of sets of tasks using
 increasingly realistic representations of the data. In general, each set
 of tasks includes 3 subtasks.
 
-#. Providing tomographic bin assignments for all objects, and estimate
+#. Provide tomographic bin assignments for all objects and estimate
    ensemble :math:`n(z)` distributions for a set of different scenarios
-   and provide the estimates in a specified format.
+   in a specified format.
 
 #. Provide trained models for the different scenarios and a Python
    function that can be used to generate the estimates from subtask 1 on
    an arbitrary dataset. We will not actually run these ourselves as
-   part of the challenge, but we do ask that you providing timing
+   part of the challenge, but we do ask that you provide timing
    estimates for how long it took you to run this.
 
 #. Provide a Python function that can be used to generate the models and
    estimates from subtasks 1 and 2 on arbitrary datasets. We will not
    actually run these ourselves as part of the challenge, but we do ask
-   that you providing timing estimates for how long it took you to run
+   that you provide timing estimates for how long it took you to run
    this.
 
-The :math:`n(z)` estimates in subtask 1, the trained models in subtask 2
-and and the timing estiamtes should be provided in a compressed ``tar``
-file. Templates and instructions for the Python functions needed for
-subtasks 2 and 3 will be provided and are described below.
+The :math:`n(z)` estimates in subtask 1 and the timing estimates should
+be provided in a compressed ``tar`` file. Any models used in subtask 2
+should be provided separately. Templates and instructions for the Python
+functions needed for subtasks 2 and 3 are described below.
 
-Data format for per-object :math:`p(z)` estimates
--------------------------------------------------
+Data format for submissions
+---------------------------
 
-The :math:`p(z)` estimates should be submitted in ``qp`` format, which
-allows users to specify a complete :math:`p(z)` distribution for each
-object, as well as summary statistics for each object.
+Data format for timing information
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The timing information should be provided as a YAML file containing a
+nested dictionary, named ``timing.yaml``. All times should be given in
+seconds. Here is an example:
+
+::
+
+   taskset_1:
+     inform:
+       flagship_1yr: 204.34
+       flagship_4yr: 202.21
+       cardinal_1yr: 201.30
+       cardinal_4yr: 207.34
+     estimate:
+       flagship_1yr: 151.71
+       flagship_4yr: 157.15
+       cardinal_1yr: 163.04
+       cardinal_4yr: 158.77
+   taskset_2:
+     inform:
+       flagship_1yr: 201.17
+       flagship_4yr: 202.81
+       cardinal_1yr: 208.26
+       cardinal_4yr: 204.71
+     estimate:
+       flagship_1yr: 153.88
+       flagship_4yr: 154.24
+       cardinal_1yr: 161.62
+       cardinal_4yr: 159.63
+
+Data format for bin assignments
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The bin assignments should be provided as an HDF5 file containing a
+dictionary with two arrays: object IDs (``object_id``) and corresponding
+bin assignments (``bhat_for_wide_data``). The tomographic bins should
+run from 0 to :math:`n_{\rm bins} -1`. The value :math:`-1` is reserved
+as a guard value for unassigned objects. The files should be called
+``nz_challenge_taskset_1_cardinal__bhat_1yr.hdf5``.
+
+::
+
+   # Interpolated grid
+   import tables_io
+
+   data_dict = dict(
+       bhat_for_wide_data=bin_assignments, 
+       object_id=wfd_data['object_id'],
+   )
+   tables_io.write(data_dict, <output_filename.hdf5>)
+
+
+
+Data format for ensemble :math:`n(z)` estimates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :math:`n(z)` estimates should be submitted in ``qp`` format, which
+allows users to specify a complete :math:`n(z)` distribution for each
+tomographic bin, as well as summary statistics for each ensemble.
 
 The ``qp`` package :raw-latex:`\cite{QP}` supports several different
-representations of :math:`p(z)`, such as different functional forms as
+representations of :math:`n(z)`, such as different functional forms as
 well as interpolated grids, histograms, and others.
 
 For users unfamiliar with ``qp``, we highly recommend representing the
-:math:`n(z)` as either an histogram grid or a Gaussian mixture model.
+:math:`n(z)` as either a histogram grid or a Gaussian mixture model. The
+files should be called
+``nz_challenge_taskset_1_cardinal__nz_estimate_1yr.hdf5``.
 
 ::
 
@@ -347,27 +427,61 @@ For users unfamiliar with ``qp``, we highly recommend representing the
    ensemble = qp.mixmod.create_ensemble(means=means,stds=stds,weights=weights)
    ensemble.write_to(<output_filename.hdf5>)
 
-The submission files should use the same file name conventions defined
-in `<tab:file_fields>`_. The labels will typically be
-``nz_estimate`` (for the :math:`n(z)` estimates), ``bhat_estimate`` (for
-the bin assignements) or ``timing`` and will be specified in the
-descriptions of the various tasks, e.g.,
+
+Data format for ensemble :math:`n(z)` samples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :math:`n(z)` samples should also be submitted in ``qp`` format.
+Unlike the :math:`n(z)` estimate files, which provide a single PDF for
+each tomographic bin, the :math:`n(z)` samples should provide a sample
+of 100 “equally likely” PDFs for each tomographic bin. The bin index and
+sample realization number associated with each PDF can be added to a
+``qp`` ensemble using code like this:
 
 ::
 
-   \texttt{nz\_challenge\_taskset\_1\_cardinal\-\_nz\_estimate\_1yr.hdf5}
-     or
-   \texttt{nz\_challenge\_taskset\_1\_cardinal\_bhat\_1yr.pkl}.
+   ensemble = qp.hist.create_ensemble(bins,yvals)
+   n_samples = 100
+   n_tomo_bins = 5
+   i_realization = np.arange(n_samples)
+   bin_idx = np.arange(n_tomo_bins)
+   ensemble.set_ancil(
+       dict(
+           bin_idx=np.repeat(bin_idx, n_samples),
+           i_realization=np.tile(i_realization, n_tomo_bins),
+       )
+   )
 
-All of these files should then be joined into a ``tar`` file, which
-should then be placed somewhere it can be download. The URL for the
-``tar`` should be specified in ``tests/test_{submission}.py``
+Packaging submission files
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The submission files should use the same file name conventions defined
+in `<tab:file_fields>`_. The labels will typically be
+``nz_estimate`` (for the :math:`n(z)` estimates) and ``bhat_estimate``
+(for the bin assignments), and will be specified in the descriptions of
+the various tasks, e.g.,
+
+::
+
+   \texttt{nz\_challenge\_taskset\_2\_cardinal\-\_nz\_estimate\_1yr.hdf5}
+     or
+   \texttt{nz\_challenge\_taskset\_2\_cardinal\-\_nz\_samples\_1yr.hdf5}
+     or
+   \texttt{nz\_challenge\_taskset\_2\_cardinal\_bhat\_1yr.pkl}.
+
+The timing information file should simply be called ``timing.yaml``. All
+of these files should then be joined into a compressed ``tar`` file,
+which should then be placed somewhere it can be downloaded. The URL for
+the ``tar`` file should be specified in ``tests/test_{submission}.py``.
+Please take care to avoid putting extra directory structure in the tar
+file, i.e., we would like to uncompress it directly to the target area.
 
 ::
 
    SUBMISSION_NAME = "example"
    SUBMISSION_URL = "https://your.institution.edu/submit_example.tgz"
 
+   
 Format for estimation-only Python functions and trained models
 --------------------------------------------------------------
 
@@ -399,6 +513,7 @@ or
 Templates for these functions are provided in the file
 ``tests/test_{submission}.py`` created as part of the setup.
 
+
 Format for training and estimation Python functions
 ---------------------------------------------------
 
@@ -410,35 +525,40 @@ like this:
 ::
 
    def run_taskset_1_training_and_estimation(
-       train_file: str | Path,
-       test_file: str | Path,
-       output_file: str | Path,
+       ddf_files: list[str | Path],
+       wfd_file: str | Path,
+       output_nz_file: str | Path,
+       output_bhat_file: str | Path,
    ) -> None:
-       # train a model using the "train_file" and make p(z) estimates 
-       # and write them to "output_file"
+       # train a model using the "ddf_files" (and possibly wfd_file)
+       # and write n(z) estimates to "output_nz_file"
+       # and the bin assignments to output_bhat_file
 
 or
 
 ::
 
    def run_taskset_2_training_and_estimation(
-       train_file: str | Path,
-       test_file: str | Path,
-       output_file: str | Path,
+       ddf_files: list[str | Path],
+       wfd_file: str | Path,
+       output_nz_file: str | Path,
+       output_bhat_file: str | Path,
    ) -> None:
-       # train a model using the "train_file" and make p(z) estimates
-       # and write them to "output_file"
+       # train a model using the "ddf_files" (and possibly wfd_file)
+       # and write n(z) estimates to "output_nz_file"
+       # and the bin assignments to output_bhat_file
 
 Templates for these functions are provided in the file
 ``tests/test_{submission}.py`` created as part of the setup.
 
-.. _submission-mechanism-1:
+.. _submission-process:
+
 
 Submission process
 ------------------
 
 Submissions will take the form of a pull request on the
-``bz_data_challenge`` repository and will include:
+``nz_data_challenge`` repository and will include:
 
 #. A file ``tests/test_{submission}.py`` that includes the URL from
    which the compressed ``tar`` file should be downloaded as well as the
@@ -451,15 +571,15 @@ Submissions will take the form of a pull request on the
 
 #. A file ``.github/workflows/submit_{submission}.yaml`` to run the
    submission validation in a GitHub action. This should not need to be
-   modified unless the prerequisites installation requires more than
-   just ``pip`` installing packages.
+   modified unless the prerequisite installation requires more than just
+   ``pip``-installing packages.
 
 All three of these files are created by the
 ``scripts/prepare_submission.py`` script.
 
-You will need modify the ``tests/test_{submission}.py`` to give the
-location of the ``tar`` file containing the NZ estimates, bin
-assignemnts, timing estimates and trained models, and to implement the
+You will need to modify the ``tests/test_{submission}.py`` to give the
+location of the ``tar`` file containing the :math:`n(z)` estimates, bin
+assignments, timing estimates, and trained models, and to implement the
 required functions.
 
 See ``https://github.com/LSSTDESC/nz_data_challenge/pull/6`` for an
@@ -485,14 +605,14 @@ expected file they check that:
 #. the :math:`bhat` file exists;
 
 #. the :math:`bhat` file contains a two-column table with “bhat”
-   assignement and “object_id” for each object.
+   assignment and “object_id” for each object.
 
 #. the object_ids in the submission file match the associated test file.
 
 If any of these checks fail, the GitHub action triggered by the
 submission will fail and report the cause of the failure. **Note that
-the github actions occasionally fail to download the data files. If this
-happens simply rerunning the action typically succeeds.**
+the GitHub actions occasionally fail to download the data files. If this
+happens, simply re-running the action typically succeeds.**
 
 The easiest way to test that you have correctly implemented the required
 functions is simply to run these commands.
@@ -505,7 +625,7 @@ functions is simply to run these commands.
    # Run the functions you have provided as unit tests
    py.test tests/test_{submission_name}.py
 
-if this succeeds, you can use a provided script to help you open the
+If this succeeds, you can use a provided script to help you open the
 pull request for your submission.
 
 ::
@@ -513,8 +633,8 @@ pull request for your submission.
    # run the submission helper script.
    python scripts/submit.py {submission_name}
 
-Note that the help script only prints the required commands, it does not
-run them. In short the command are:
+Note that the helper script only prints the required commands; it does
+not run them. In short, the commands are:
 
 ::
 
@@ -545,6 +665,7 @@ run them. In short the command are:
    # Finally, make sure that the github action validating your submission
    # succeeds and fix any issues.
 
+   
 Submission aids
 ---------------
 
@@ -554,14 +675,14 @@ A few scripts are provided to help you.
    data.
 
 -  ``scripts/prepare_submission.py``: sets up your area for a
-   submission, creates the needed files from templates and downloads the
-   public data, and suggests that you create a branch for you
+   submission, creates the needed files from templates, downloads the
+   public data, and suggests that you create a branch for your
    submission.
 
 -  ``scripts/remove_submission_files.py``: removes the submission files
    if you need to start over.
 
--  ``scripts/run_metrics.py``: run perfomance metrics on files in a
+-  ``scripts/run_metrics.py``: runs performance metrics on files in a
    submission you have created.
 
 -  ``py.test tests/test_{submission_name}.py``: validates all the parts
@@ -589,33 +710,99 @@ would be assigned to the true bin.
 
 We then use this to construct the following metrics:
 
--  ``Accuracy`` is simply the median of :math:`\Delta_i`.
+Performance on bin-assignment estimates, i.e., how well the algorithm
+assigns objects to the desired tomographic bin, is assessed using the
+confusion matrix :math:`N_{\rm true, assigned}`. In the ideal case this
+matrix would be diagonal, i.e., all the objects would be assigned to the
+true bin.
 
--  ``Balanced Accuracy`` is the fraction of the :math:`\Delta`
-   distribution outside of
-   :math:`[0, {\rm max}(0.06, 3\sigma_{\rm iqr})]`.
+We use the following metrics to quantify performance:
 
--  ``Cohen’s Kappa`` .
+-  **Accuracy**: The fraction of objects that are correctly assigned to
+   their true tomographic bin, i.e.,
+   :math:`{\rm Accuracy} = N_{\rm correct} / N_{\rm total}`.
 
--  ``Mutual Information`` .
+-  **Balanced Accuracy**: The mean of the per-class recall values. For
+   each tomographic bin :math:`k`, we compute the recall
+   :math:`R_k = {\rm TP}_k / N_k`, where :math:`{\rm TP}_k` is the
+   number of true positives and :math:`N_k` is the number of objects
+   truly in bin :math:`k`. The balanced accuracy is then
+   :math:`{\rm BA} = \frac{1}{K}\sum_{k=1}^{K} R_k`. This metric
+   accounts for unequal bin populations.
 
--  ``Log Loss From Labels`` .
+-  **Cohen’s Kappa**: Measures inter-rater agreement for categorical
+   assignments, correcting for agreement occurring by chance. It is
+   defined as :math:`\kappa = (p_o - p_e) / (1 - p_e)`, where
+   :math:`p_o` is the observed agreement (fraction correctly assigned)
+   and :math:`p_e` is the expected agreement by chance given the
+   marginal distributions. Values range from :math:`-1` to :math:`1`,
+   with :math:`1` indicating perfect agreement.
 
+-  **Mutual Information**: The mutual information between the true
+   redshift values and the bin assignments, estimated using
+   scikit-learn’s mutual information estimator for continuous features
+   and reported in bits. Higher values indicate that the bin assignments
+   carry more information about the true redshift.
+
+-  **Log Loss from Labels**: Constructs a one-hot probability matrix
+   from the predicted bin labels (with a small smoothing
+   :math:`\epsilon`) and evaluates the negative log-likelihood of the
+   true labels:
+   :math:`\mathcal{L} = -\frac{1}{N}\sum_{i=1}^{N} \log p(\hat{y}_i = y_i)`.
+   Lower values indicate better assignments.
+
+  
 Metrics for ensemble :math:`n(z)` distributions
 -----------------------------------------------
 
-We will also assess the algorithm’s ability to provide a precise and
-accurate estimate of the posterior distribution, :math:`n(z)`, for each
-ensemble following metrics.
+We also assess the algorithm’s ability to provide a precise and accurate
+estimate of the :math:`n(z)` distribution for each tomographic bin using
+the following metrics.
 
--  ``Total information Loss``.
+-  **Total Information Loss**: The weighted average of per-bin
+   Kullback–Leibler divergences :math:`D_{\rm KL}(p_{\rm true} \| p_{\rm est})`,
+   reported in bits. The weight for each bin is
+   proportional to the number of objects assigned to that bin. This
+   metric quantifies how much information is lost when the estimated
+   distribution is used in place of the true one.
 
--  ``Wasserstein Distance``.
+-  **RMS of :math:`\boldsymbol{\delta\mu_i}`** (mean shift): For each
+   tomographic bin we compute the mean :math:`\mu_i` of both the
+   estimated and true :math:`n(z)` distributions on the redshift grid,
+   then report the root-mean-square of the per-bin differences:
+   :math:`{\rm RMS}_\mu = \sqrt{\frac{1}{K}\sum_{i=1}^{K}(\mu_{i,{\rm est}} - \mu_{i,{\rm true}})^2}`.
 
--  ``RMS of``\ :math:`\delta_{\rm true} - \delta_{\rm est}`.
+-  **RMS of :math:`\boldsymbol{\delta\sigma_i}`** (width shift):
+   Analogous to the mean shift metric, but for the standard deviation
+   :math:`\sigma_i` of each bin’s :math:`n(z)` distribution:
+   :math:`{\rm RMS}_\sigma = \sqrt{\frac{1}{K}\sum_{i=1}^{K}(\sigma_{i,{\rm est}} - \sigma_{i,{\rm true}})^2}`.
 
--  ``RMS of``\ :math:`\sigma_{\rm true} - \sigma_{\rm est}`.
 
+Metrics for cosmology analysis (Fisher forecasts)
+-------------------------------------------------
+
+We also estimate how well each algorithm would perform in the context of
+cosmological analyses by running Fisher matrix forecasts using the
+``fisherA2Z`` package. For each submission we compute the
+:math:`w_0`–:math:`w_a` dark energy Figure of Merit (FoM), defined as
+the inverse area of the :math:`1\sigma` contour in the
+:math:`w_0`–:math:`w_a` plane, under two analysis configurations:
+
+-  **Cosmic Shear FoM**: A Fisher forecast using only the cosmic shear
+   two-point correlation function.
+
+-  **3\ :math:`\times`\ 2pt FoM**: A Fisher forecast using the full
+   combination of cosmic shear, galaxy–galaxy lensing, and galaxy
+   clustering (the “3\ :math:`\times`\ 2pt” data vector).
+
+These forecasts use the submitted :math:`n(z)` estimates and the true
+:math:`n(z)` distributions to quantify the bias in cosmological
+parameters induced by errors in the redshift distributions. The forecast
+accounts for survey-specific parameters including the effective source
+number density per tomographic bin, fractional sky coverage, and
+per-component ellipticity dispersion.
+
+	 
 
 Metrics for computational usability and performance
 ---------------------------------------------------
@@ -657,124 +844,127 @@ Challenge Tasks related to :math:`n(z)` estimation
 Task set 1: Assign objects to fixed tomographic bins and estimate ensemble PDFs using mostly representative training samples
 ----------------------------------------------------------------------------------------------------------------------------
 
-The first, simplest task is to estimate redshifts using representative
-training samples. I.e., the training samples are drawn from the same
-distributions as the test samples. For this task set we did not use any
-of the spectroscopic selection emulation, but simply applied a uniform
-magnitude cut of :math:`i < 23` in selecting objects for both the
-training and test samples.
+The first and simplest task is to assign objects to fixed tomographic
+bins and estimate ensemble PDFs using largely representative training
+samples, i.e., the training samples are drawn from essentially the same
+distributions as the test samples. In fact, both the training data and
+the test data are drawn from a sample that includes some mislabeled
+many-band photometric redshifts and “unrecognized blends” (multiple
+objects that are detected as a single object by the image processing
+algorithm); however, these primarily affect fainter objects, and for
+this task set we apply a uniform magnitude cut of :math:`i < 23` when
+selecting objects for both the training and test samples.
 
-The four
-``nz_challenge_taskset_1_{simulation}_training_{scenario}.hdf5`` files
+We selected the tomographic bins to provide approximately equal numbers
+of objects per bin.
+
+The ``nz_challenge_taskset_1_{simulation}_{scenario}_ddf_0X.hdf5`` files
 are the training sets for the “Flagship” and “Cardinal” simulations,
 emulating 1 year and 4 years of LSST data under the expected observing
 strategy and conditions. These files have true redshifts to serve as
-labels.
+labels for most objects, and many-band photometry that includes some
+mislabeled photometric redshifts for all objects. Each file has the
+statistics typical of a single deep-drilling field.
 
 The corresponding
-``nz_challenge_taskset_1_{simulation}_test_{scenario}.hdf5`` files were
-drawn from the same distributions. The true redshifts have been removed
-from these files. The task is to assign :math:`p(z)` estimates for all
-the objects in these 4 test files.
+``nz_challenge_taskset_1_{simulation}_{scenario}_wfd.hdf5`` files were
+drawn from the same distributions over the entire simulation footprint.
+The true redshifts have been removed from these files. The task is to
+assign each object in this file to a tomographic bin and then estimate
+the :math:`n(z)` distribution for each bin.
 
 The subtasks in this task set are:
 
-#. Estimate :math:`p(z)` for each object in each of the test files and
-   provide the estimates in a downloadable ``tar`` file.
+#. Assign each object to a tomographic bin and estimate the :math:`n(z)`
+   distribution for each bin. Provide bin assignments and estimates as
+   part of the downloadable ``tar`` file.
 
 #. Provide pre-trained models appropriate to each of the training files
    and implement a Python function (``run_taskset_1_estimation_only``)
-   to use those pre-trained models to estimate :math:`p(z)` for each
-   object in the associated test files.
+   to use those pre-trained models to assign each object to a
+   tomographic bin and then estimate the :math:`n(z)` distribution for
+   each bin.
 
 #. Implement a Python function
    (``run_taskset_1_training_and_estimation``) to train a model for each
-   training file and use that model to estimate :math:`p(z)` for each
-   object in the associated test files.
+   training set and use that model to assign each object to a
+   tomographic bin and then estimate the :math:`n(z)` distribution for
+   each bin.
 
 Task set 2: Assign objects to fixed tomographic bins and estimate ensemble PDFs using non-representative samples
 ----------------------------------------------------------------------------------------------------------------
 
-The second, slightly more challenging task is to estimate redshifts
-using non-representative training samples. I.e., the training samples
-are not drawn from the same distributions as the test samples. For this
-task set we applied the spectroscopic selection emulation for the
-training set, but retained all the objects down to :math:`i < 25.4` in
-the test set. Accordingly, the training set will not be representative
-of the fainter objects in the test set. This reflects that spectroscopic
-redshifts are typically significantly more difficult to obtain than
-photometry.
+The second, more challenging task is to estimate redshifts using much
+more non-representative training samples, i.e., the training samples are
+not drawn from the same distributions as the test samples. Again, both
+the training data and the test data are drawn from a sample that
+includes some mislabeled many-band photometric redshifts and
+“unrecognized blends”, but here we retained all the objects down to
+:math:`i < 25.5` in both the test and training sets. However, since the
+training set includes the emulation of spectroscopic selections, it will
+not be representative of the fainter objects in the test set. This
+reflects the fact that spectroscopic redshifts are typically
+significantly more difficult to obtain than photometry.
 
-The four
-``nz_challenge_taskset_2_{simulation}_training_{scenario}.hdf5`` files
+The ``nz_challenge_taskset_2_{simulation}_{scenario}_ddf_0X.hdf5`` files
 are the training sets for the “Flagship” and “Cardinal” simulations,
-emulating 1 year and 10 years of LSST data under the expected observing
-strategy and conditions and with spectroscopic selections emulated.
+emulating 1 year and 4 years of LSST data under the expected observing
+strategy and conditions, with spectroscopic selections emulated.
 
 The corresponding
-``nz_challenge_taskset_2_{simulation}_test_{scenario}.hdf5`` files were
+``nz_challenge_taskset_2_{simulation}_{scenario}_wfd.hdf5`` files were
 drawn from the distributions of all objects down to :math:`i <
-25.4`, and the true redshifts have been removed from these files. The
-task is to assign :math:`p(z)` estimates for all the objects in these 4
-test files.
+25.5`, and the true redshifts have been removed from these files. The
+task is to assign each object in this file to a tomographic bin and then
+estimate the :math:`n(z)` distribution for each bin.
 
 The subtasks in this task set are:
 
-#. Estimate :math:`p(z)` for each object in each of the test files and
-   provide the estimates in a downloadable ``tar`` file.
+#. Assign each object to a tomographic bin and estimate the :math:`n(z)`
+   distribution for each bin. Provide bin assignments and estimates as
+   part of the downloadable ``tar`` file.
 
 #. Provide pre-trained models appropriate to each of the training files
    and implement a Python function (``run_taskset_2_estimation_only``)
-   to use those pre-trained models to estimate :math:`p(z)` for each
-   object in the associated test files.
+   to use those pre-trained models to assign each object to a
+   tomographic bin and then estimate the :math:`n(z)` distribution for
+   each bin.
 
 #. Implement a Python function
    (``run_taskset_2_training_and_estimation``) to train a model for each
-   training file and use that model to estimate :math:`p(z)` for each
-   object in the associated test files.
+   training set and use that model to assign each object to a
+   tomographic bin and then estimate the :math:`n(z)` distribution for
+   each bin.
 
 Task set 3: Assign objects to arbitrary tomographic bins and estimate ensemble PDFs using non-representative samples
 --------------------------------------------------------------------------------------------------------------------
 
-The third task is to estimate redshifts using non-representative
-training samples that more accurately emulate real reference redshift
-samples. This include some narrowband photometric redshifts from the
-COSMOS2020 dataset that go deeper than most spectroscopic redshifts, but
-have more scatter and more significant levels of catastrophic outliers.
+This task is almost identical to task set 2; the only difference is that
+we are asking you to include estimates of the uncertainty on the
+:math:`n(z)` distributions due to cosmic variance.
 
-As before, the four
-``nz_challenge_taskset_3_{simulation}_training_{scenario}.hdf5`` files
-are the training sets for the “Flagship” and “Cardinal” simulations,
-emulating 1 year and 10 years of LSST data under the expected observing
-strategy and conditions and with spectroscopic selections emulated.
-These files include flags showing which spectroscopic survey particular
-objects would be associated with, and for the COSMOS2020 field, also
-include a column “redshift_manyband” giving the narrow-band photometric
-redshifts in addition to the spectroscopic redshifts. The point of this
-taskset is to find a way to optimally use the additional information
-from the COSMOS2020 field.
-
-The corresponding
-``nz_challenge_taskset_3_{simulation}_test_{scenario}.hdf5`` files were
-from the distributions of all objects down to :math:`i< 25.4`, and both
-the true redshifts and the narrow-band photometric redshifts have been
-removed from these files. The task is to assign :math:`p(z)` estimates
-for all the objects in these 4 test files.
+This task set re-uses the files from task set 2.
 
 The subtasks in this task set are:
 
-#. Estimate :math:`p(z)` for each object in each of the test files and
-   provide the estimates in a downloadable ``tar`` file.
+#. Assign each object to a tomographic bin, estimate the :math:`n(z)`
+   distribution for each bin, and provide a set of “equally probable”
+   :math:`n(z)` realizations for each tomographic bin that properly
+   account for the effects of cosmic variance. Then provide bin
+   assignments, estimates, and extra realizations as part of the
+   downloadable ``tar`` file.
 
 #. Provide pre-trained models appropriate to each of the training files
    and implement a Python function (``run_taskset_3_estimation_only``)
-   to use those pre-trained models to estimate :math:`p(z)` for each
-   object in the associated test files.
+   to use those pre-trained models to assign each object to a
+   tomographic bin and then estimate the :math:`n(z)` distribution for
+   each bin.
 
 #. Implement a Python function
-   (``run_taskset_1_training_and_estimation``) to train a model for each
-   training file and use that model to estimate :math:`p(z)` for each
-   object in the associated test files.
+   (``run_taskset_3_training_and_estimation``) to train a model for each
+   training set and use that model to assign each object to a
+   tomographic bin and then estimate the :math:`n(z)` distribution for
+   each bin.
 
 
 .. _input_sims:
@@ -955,5 +1145,5 @@ catalogs to the files released with the challenge.
 
 
 .. include:: validation.rst        
-
+	    
 	   

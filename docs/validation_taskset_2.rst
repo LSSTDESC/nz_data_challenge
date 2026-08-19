@@ -1,3 +1,4 @@
+================================
 Validation figures for taskset 2
 ================================
 
@@ -33,7 +34,7 @@ The data preparation for taskset 2 including the following steps:
       :alt: image
       :width: 45.0%
    
-   .. image:: figures nz_challenge_taskset_2_cardinal_4yr_footprint.png
+   .. image:: figures/nz_challenge_taskset_2_cardinal_4yr_footprint.png
       :alt: image
       :width: 45.0%
 
