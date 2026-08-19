@@ -23,6 +23,17 @@ sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../src'))
 
 print(sys.path)
+
+# Register a 'raw-latex' role so that LaTeX citation commands degrade
+# gracefully in HTML output (rendered as bracketed text).
+from docutils.parsers.rst import roles
+from docutils import nodes
+
+def raw_latex_role(name, rawtext, text, lineno, inliner, options=None, content=None):
+    node = nodes.inline(rawtext, text, classes=['raw-latex'])
+    return [node], []
+
+roles.register_local_role('raw-latex', raw_latex_role)
     
 
 # Use unittest mock module to shield some modules away from docs building.

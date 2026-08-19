@@ -766,13 +766,13 @@ the following metrics.
    metric quantifies how much information is lost when the estimated
    distribution is used in place of the true one.
 
--  **RMS of :math:`\boldsymbol{\delta\mu_i}`** (mean shift): For each
+-  **Delta of mean shifts added in quadrature**: For each
    tomographic bin we compute the mean :math:`\mu_i` of both the
    estimated and true :math:`n(z)` distributions on the redshift grid,
    then report the root-mean-square of the per-bin differences:
    :math:`{\rm RMS}_\mu = \sqrt{\frac{1}{K}\sum_{i=1}^{K}(\mu_{i,{\rm est}} - \mu_{i,{\rm true}})^2}`.
 
--  **RMS of :math:`\boldsymbol{\delta\sigma_i}`** (width shift):
+-  **Delta of mean rms added in quadrature** (width shift):
    Analogous to the mean shift metric, but for the standard deviation
    :math:`\sigma_i` of each bin’s :math:`n(z)` distribution:
    :math:`{\rm RMS}_\sigma = \sqrt{\frac{1}{K}\sum_{i=1}^{K}(\sigma_{i,{\rm est}} - \sigma_{i,{\rm true}})^2}`.
