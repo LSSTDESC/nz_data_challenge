@@ -85,7 +85,7 @@ def setup_public_area() -> None:
         # Note that the tar file has "public" as top level directory
         # so we if we extract to "tests" the files actually end
         # up in "tests/public"
-        submit_utils.download_and_extract_tar(PUBLIC_URL, ".", BACKUP_URL)
+        download_and_extract_tar(PUBLIC_URL, ".", BACKUP_URL)
 
         
 def check_files(
@@ -199,6 +199,7 @@ def check_files(
 
 def check_submission(
     submit_dir: str | Path,
+    tasksets: list[str]=TASKSETS,
 ) -> None:
     """Validate all files in a submission against the public test data.
 
@@ -209,14 +210,20 @@ def check_submission(
     ----------
     submit_dir
         Path to the submission directory containing n(z) and bhat files.
+    tasksets:
+        Which tasksets to check?
 
     Raises
     ------
     RuntimeError
         If any file fails validation checks performed by check_files.
     """
-    id_offset = 0
-    for taskset in TASKSETS:
+    OFFSETS = dict(
+        taskset_1=0,
+        taskset_2=4_000_000,        
+    )
+    id_offset = OFFSETS[taskset]
+    for taskset in tasksets:
         tomo_bin_edges = TOMO_BIN_EDGES[taskset]
         n_tomo_bins = len(tomo_bin_edges) - 1
         for sim in SIMS:

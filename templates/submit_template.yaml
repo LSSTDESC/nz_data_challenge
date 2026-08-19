@@ -17,6 +17,7 @@ jobs:
       matrix:
         python-version: ['3.13']
         submission: ['__SUBMISSION_NAME__']
+        tasksets: ['taskset_1', 'taskset_2', 'taskset_3']
 
     steps:
       - uses: actions/checkout@v3
@@ -35,4 +36,4 @@ jobs:
           if [ -f requirements_${{ matrix.submission }}.txt ]; then pip install -r requirements_${{ matrix.submission }}.txt; fi
       - name: Run unit tests with pytest
         run: |
-          python -m pytest tests/test_${{ matrix.submission }}.py
+          python -m pytest -k ${{ matrix.tasksets }} tests/test_${{ matrix.submission }}.py

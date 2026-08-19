@@ -45,8 +45,9 @@ def setup_submit_area(request: pytest.FixtureRequest) -> int:
 
 
 def run_taskset_1_estimation_only(
-    model_file: str | Path,
+    key: str,
     wfd_file: str | Path,
+    models_dir: str | Path,
     output_nz_estimate_file: str | Path,
     output_bhat_file: str | Path,
 ) -> None:
@@ -54,24 +55,90 @@ def run_taskset_1_estimation_only(
 
 
 def run_taskset_2_estimation_only(
-    model_file: str | Path,
+    key: str,
     wfd_file: str | Path,
+    models_dir: str | Path,
     output_nz_estimate_file: str | Path,
     output_bhat_file: str | Path,
 ) -> None:
     return
 
 
+def run_taskset_3_estimation_only(
+    key: str,
+    wfd_file: str | Path,
+    models_dir: str | Path,
+    output_nz_estimate_file: str | Path,
+    output_nz_samples_file: str | Path,
+    output_bhat_file: str | Path,
+) -> None:
+    return
 
-def test_example_submission(
+
+def run_taskset_1_training_and_estimation(
+    key: str,
+    wfd_file: str | Path,
+    models_dir: str | Path,
+    ddf_files: list[str | Path],
+    output_nz_estimate_file: str | Path,
+    output_bhat_file: str | Path,
+) -> None:
+    return
+
+
+def run_taskset_2_training_and_estimation(
+    key: str,
+    wfd_file: str | Path,
+    models_dir: str | Path,
+    ddf_files: list[str | Path],    
+    output_nz_estimate_file: str | Path,
+    output_bhat_file: str | Path,
+) -> None:
+    return
+
+
+def run_taskset_3_training_and_estimation(
+    key: str,
+    wfd_file: str | Path,
+    models_dir: str | Path,
+    ddf_files: list[str | Path],    
+    output_nz_estimate_file: str | Path,
+    output_nz_samples_file: str | Path,
+    output_bhat_file: str | Path,
+) -> None:
+    return
+
+
+def test___SUBMISSION_NAME___submit_taskset_1(
     setup_submit_area: int,
 ) -> None:
     """
     Test fuction to validate a submisson
     """    
     assert setup_submit_area == 0
-    submit_utils.check_submission(SUBMIT_DIR)
+    submit_utils.check_submission(SUBMIT_DIR, 'taskset_1')
     
 
+def test___SUBMISSION_NAME___submit_taskset_2(
+    setup_submit_area: int,
+) -> None:
+    """
+    Test fuction to validate a submisson
+    """    
+    assert setup_submit_area == 0
+    submit_utils.check_submission(SUBMIT_DIR, 'taskset_2')
+
+
+def test___SUBMISSION_NAME___submit_taskset_3(
+    setup_submit_area: int,
+) -> None:
+    """
+    Test fuction to validate a submisson
+    """    
+    assert setup_submit_area == 0
+    submit_utils.check_submission(SUBMIT_DIR, 'taskset_3')
+
+
+    
 
     
