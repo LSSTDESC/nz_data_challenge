@@ -222,8 +222,8 @@ def check_submission(
         taskset_1=0,
         taskset_2=4_000_000,        
     )
-    id_offset = OFFSETS[taskset]
     for taskset in tasksets:
+        id_offset = OFFSETS[taskset]
         tomo_bin_edges = TOMO_BIN_EDGES[taskset]
         n_tomo_bins = len(tomo_bin_edges) - 1
         for sim in SIMS:
@@ -233,3 +233,42 @@ def check_submission(
                 test_ids = set(np.arange(id_offset, id_offset+1_000_000).astype(int))
                 check_files(nz_file, bhat_file, test_ids, n_tomo_bins)
                 id_offset += 1_000_000
+
+
+def estimate_only(
+    the_function,
+    public_dir: str | Path,
+    submit_dir: str | Path,
+    models_dir: str | Path,
+    taskset: str | Path,
+) -> None:
+
+    for sim in SIMS:
+        for scenario in SCENARIOS:
+            key = f"{taskset}_{sim}_{scenario}"
+            wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
+            output_nz_estimate_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
+            output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"            
+            output_bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+            the_function(key, wfd_file, models_dir, output_nz_estimate_file, output_bhat_file, output_nz_samples_file)
+
+
+def train_and_estimate(
+    the_function,
+    public_dir: str | Path,
+    submit_dir: str | Path,
+    models_dir: str | Path,
+    taskset: str | Path,
+) -> None:
+
+    for sim in SIMS:
+        for scenario in SCENARIOS:
+            key = f"{taskset}_{sim}_{scenario}"
+            wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
+            ddf_files = [f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_ddf_{iddf:02}.hdf5" for iddf in range(5)]
+            output_nz_estimate_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
+            output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"            
+            output_bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+            the_function(key, wfd_file, ddf_files, models_dir, output_nz_estimate_file, output_bhat_file, output_nz_samples_file)
+                
+        
