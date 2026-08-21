@@ -269,6 +269,6 @@ def train_and_estimate(
             output_nz_estimate_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
             output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"            
             output_bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-            the_function(key, wfd_file, ddf_files, models_dir, output_nz_estimate_file, output_bhat_file, output_nz_samples_file)
+            the_function(key, wfd_file, models_dir, ddf_files, output_nz_estimate_file, output_bhat_file, output_nz_samples_file)
                 
         
