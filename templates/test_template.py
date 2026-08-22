@@ -116,7 +116,7 @@ def test___SUBMISSION_NAME___estimate_only_taskset_1(
     assert setup_model_area == 0
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
-    test_submit_area = f"submissions_test/{SUBMISSION_NAME}"
+    test_submit_area = f"submission_test/{SUBMISSION_NAME}"
     submit_utils.estimate_only(
         run_taskset_1_estimation_only,
         PUBLIC_AREA,
@@ -136,7 +136,7 @@ def test___SUBMISSION_NAME___estimate_only_taskset_2(
     assert setup_model_area == 0
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
-    test_submit_area = f"submissions_test/{SUBMISSION_NAME}"
+    test_submit_area = f"submission_test/{SUBMISSION_NAME}"
     submit_utils.estimate_only(
         run_taskset_2_estimation_only,
         PUBLIC_AREA,
@@ -156,7 +156,7 @@ def test___SUBMISSION_NAME___estimate_only_taskset_3(
     assert setup_model_area == 0
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
-    test_submit_area = f"submissions_test/{SUBMISSION_NAME}"
+    test_submit_area = f"submission_test/{SUBMISSION_NAME}"
     submit_utils.estimate_only(
         run_taskset_3_estimation_only,
         PUBLIC_AREA,
@@ -174,7 +174,7 @@ def test___SUBMISSION_NAME___train_and_estimate_taskset_1(
     """
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
-    test_submit_area = f"submissions_test2/{SUBMISSION_NAME}"
+    test_submit_area = f"submission_test2/{SUBMISSION_NAME}"
     test_model_area = f"models_test2/{SUBMISSION_NAME}"
     submit_utils.train_and_estimate(
         run_taskset_1_training_and_estimation,
@@ -194,7 +194,7 @@ def test___SUBMISSION_NAME___train_and_estimate_taskset_2(
     """
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
-    test_submit_area = f"submissions_test2/{SUBMISSION_NAME}"
+    test_submit_area = f"submission_test2/{SUBMISSION_NAME}"
     test_model_area = f"models_test2/{SUBMISSION_NAME}"
     submit_utils.train_and_estimate(
         run_taskset_2_training_and_estimation,
@@ -214,7 +214,7 @@ def test___SUBMISSION_NAME___train_and_estimate_taskset_3(
     """
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
-    test_submit_area = f"submissions_test2/{SUBMISSION_NAME}"
+    test_submit_area = f"submission_test2/{SUBMISSION_NAME}"
     test_model_area = f"models_test2/{SUBMISSION_NAME}"
     submit_utils.train_and_estimate(
         run_taskset_3_training_and_estimation,
