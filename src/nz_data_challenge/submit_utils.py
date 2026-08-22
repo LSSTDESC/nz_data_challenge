@@ -243,6 +243,11 @@ def estimate_only(
     taskset: str | Path,
 ) -> None:
 
+    try:
+        os.makedirs(submit_dir)
+    except:
+        pass
+    
     for sim in SIMS:
         for scenario in SCENARIOS:
             key = f"{taskset}_{sim}_{scenario}"
@@ -261,6 +266,16 @@ def train_and_estimate(
     taskset: str | Path,
 ) -> None:
 
+    try:
+        os.makedirs(submit_dir)
+    except:
+        pass
+
+    try:
+        os.makedirs(models_dir)
+    except:
+        pass
+    
     for sim in SIMS:
         for scenario in SCENARIOS:
             key = f"{taskset}_{sim}_{scenario}"
