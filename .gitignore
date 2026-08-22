@@ -31,14 +31,15 @@ share/python-wheels/
 MANIFEST
 models/
 models_test/
+models_test2/
 *.hdf5
 *.tgz
 *.tar.gz
 nb/Sandbox.ipynb
-nb/submission
-nb/submission_test
-nb/results
-nb/results_test
+submission/
+submission_test/
+results/
+results_test/
 docs_results/_build
 docs_results/results
 
