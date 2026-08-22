@@ -29,10 +29,10 @@ if __name__ == '__main__':
     print("  and do not have any files added or modified\n")
     
     print("Next you add your files to git by running:")
-    print(f"  git add .github/workflows/submit_{submission_name}.yaml requirements_{submission_name}.txt tests/test_{submission_name}.py\n")
+    print(f"  git add .github/workflows/submit_{submission_name}.yaml src/nz_data_challenge/{submission_name}.py requirements_{submission_name}.txt tests/test_{submission_name}.py\n")
 
     print("Next commit your files to your branch by running:")
-    print(f'  git commit -m "Submitting {submission_name}" .github/workflows/submit_{submission_name}.yaml requirements_{submission_name}.txt tests/test_{submission_name}.py\n')
+    print(f'  git commit -m "Submitting {submission_name}" .github/workflows/submit_{submission_name}.yaml src/nz_data_challenge/{submission_name}.py requirements_{submission_name}.txt tests/test_{submission_name}.py\n')
 
     print("Next push your files to git by running:")
     print(f"  git push --set-upstream origin submit/{submission_name}\n")

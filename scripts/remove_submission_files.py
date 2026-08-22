@@ -39,6 +39,8 @@ if __name__ == '__main__':
 
     remove_file(f".github/workflows/submit_{submission_name}.yaml")
 
+    remove_file(f"src/nz_data_challenge/{submission_name}.py")
+    
     remove_file(f"requirements_{submission_name}.txt")
 
     remove_file(f"tests/test_{submission_name}.py")
