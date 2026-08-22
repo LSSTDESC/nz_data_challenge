@@ -499,34 +499,37 @@ SUBMISSION_URL = "https://your.institution.edu/submit_example.tgz"
 
 For the second subtask, submissions should provide trained models and
 implement a function to run estimation using those trained models on
-the test files provided for each task set. The function will look something like this:
+the test files provided for each task set.
+
+The function will look something like this:
 
 \begin{verbatim}
 def run_taskset_1_estimation_only(
-    model_file: str | Path,
+    key: str,
     wfd_file: str | Path,
-    output_nz_file: str | Path,
+    models_dir: str | Path,
+    output_nz_estimate_file: str | Path,
     output_bhat_file: str | Path,
-) -> None:
-    # do stuff and write n(z) estimates to "output_nz_file"
-    # and the bin assignments to output_bhat_file
+    output_nz_samples_file: str | Path | None,    
+) -> None:    
 \end{verbatim}
 
 or
 
 \begin{verbatim}
 def run_taskset_2_estimation_only(
-    model_file: str | Path,
+    key: str,
     wfd_file: str | Path,
-    output_nz_file: str | Path,
+    models_dir: str | Path,
+    output_nz_estimate_file: str | Path,
     output_bhat_file: str | Path,
+    output_nz_samples_file: str | Path | None,    
 ) -> None:
-    # do stuff and write n(z) estimates to "output_nz_file"
-    # and the bin assignments to output_bhat_file
 \end{verbatim}
 
 Templates for these functions are provided in the file
-\texttt{tests/test\_\{submission\}.py} created as part of the setup.
+\texttt{src/nz\_data\_challenge/\{submission\_name.py\}}
+created as part of the setup.
 
 
 \subsection{Format for training and estimation Python functions}
@@ -538,32 +541,33 @@ look something like this:
 
 \begin{verbatim}
 def run_taskset_1_training_and_estimation(
-    ddf_files: list[str | Path],
+    key: str,
     wfd_file: str | Path,
-    output_nz_file: str | Path,
+    models_dir: str | Path,
+    ddf_files: list[str | Path],
+    output_nz_estimate_file: str | Path,
     output_bhat_file: str | Path,
+    output_nz_samples_file: str | Path | None,     
 ) -> None:
-    # train a model using the "ddf_files" (and possibly wfd_file)
-    # and write n(z) estimates to "output_nz_file"
-    # and the bin assignments to output_bhat_file
 \end{verbatim}
 
 or
 
 \begin{verbatim}
 def run_taskset_2_training_and_estimation(
-    ddf_files: list[str | Path],
+    key: str,
     wfd_file: str | Path,
-    output_nz_file: str | Path,
+    models_dir: str | Path,
+    ddf_files: list[str | Path],
+    output_nz_estimate_file: str | Path,
     output_bhat_file: str | Path,
+    output_nz_samples_file: str | Path | None,     
 ) -> None:
-    # train a model using the "ddf_files" (and possibly wfd_file)
-    # and write n(z) estimates to "output_nz_file"
-    # and the bin assignments to output_bhat_file
 \end{verbatim}
 
 Templates for these functions are provided in the file
-\texttt{tests/test\_\{submission\}.py} created as part of the setup.
+\texttt{src/nz\_data\_challenge/\{submission\_name\}.py}
+created as part of the setup.
 
 
 \subsection{Submission mechanism}
@@ -572,25 +576,27 @@ Submissions will take the form of a pull request on the
 \texttt{nz\_data\_challenge} repository and will include:
 
 \begin{enumerate}
-  \item{A file \texttt{tests/test\_\{submission\}.py} that includes the
-      URL from which the compressed \texttt{tar} file should be downloaded
-      as well as the Python functions for subtasks 2 and 3.   When
-      created this will contain empty placeholder functions that will
-      need to be implemented.}
-   \item{A file \texttt{requirements\_\{submission\}.txt} that should
-       be modified to include \texttt{pip} package names of any
-       packages that need to be installed in order to run the
-       functions in subtasks 2 and 3.}     
-   \item{A file \texttt{.github/workflows/submit\_\{submission\}.yaml} to
-       run the submission validation in a GitHub action.  This should
-       not need to be modified unless the prerequisite installation
-       requires more than just \texttt{pip}-installing packages.}
+\item{A file \texttt{src/nz\_data\_challenge/\{submission\_name\}.py} that
+    that includes the URL from which the compressed \texttt{tar} file should be downloaded
+    as well as the Python functions for subtasks 2 and 3.    When
+    created this will contain empty placeholder functions that will
+    need to be implemented.}
+ \item{A file \texttt{tests/test\_\{submission\}.py}  that includes the
+    test functions that will run the user provide code.}
+ \item{A file \texttt{requirements\_\{submission\}.txt} that should
+     be modified to include \texttt{pip} package names of any
+     packages that need to be installed in order to run the
+     functions in subtasks 2 and 3.}     
+ \item{A file \texttt{.github/workflows/submit\_\{submission\}.yaml} to
+     run the submission validation in a GitHub action.  This should
+     not need to be modified unless the prerequisite installation
+     requires more than just \texttt{pip}-installing packages.}
 \end{enumerate}
 
 All three of these files are created by the
 \texttt{scripts/prepare\_submission.py} script.  
 
-You will need to modify the \texttt{tests/test\_\{submission\}.py} to
+You will need to modify the \texttt{src/nz\_data\_challenge/\{submission\_name\}.py} to
 give the location of the \texttt{tar} file containing the $n(z)$ estimates, bin assignments,
 timing estimates, and trained models, and to implement the required functions.
 
@@ -1116,9 +1122,10 @@ Script & Command Run & Purpose \\ \hline
 do\_01\_build & rail-project build & Build configurations to run \\
   &  & truth-to-observed pipeline \\
 do\_02\_t2o & rail-project run truth-to-observed & Run truth-to-observed \\
-  &  & pipelines to make degraded catalogs \\ 
-do\_03\_merge & rail-project merge & Combine spectroscopic selections \\
-do\_04\_subselect & rail-project subsample & Make train/test files from catalogs\\
+       &  & pipelines to make degraded catalogs \\
+nz\_00\_merge & rail-project merge & Combine spectroscopic selections \\
+  nz\_01\_subselect & rail-project subsample & Make ddf/wfd files from catalogs\\
+  nz\_02\_export & & clean up files and create output tar file\\
 \hline\hline
 \end{tabular}
 \end{table}

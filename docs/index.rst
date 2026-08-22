@@ -493,25 +493,30 @@ like this:
 ::
 
    def run_taskset_1_estimation_only(
-       model_file: str | Path,
-       test_file: str | Path,
-       output_file: str | Path,
-   ) -> None:
-       # do stuff and write p(z) estimates to "output_file"
+       key: str,
+       wfd_file: str | Path,
+       models_dir: str | Path,
+       output_nz_estimate_file: str | Path,
+       output_bhat_file: str | Path,
+       output_nz_samples_file: str | Path | None,    
+   ) -> None:    
 
 or
 
 ::
 
    def run_taskset_2_estimation_only(
-       model_file: str | Path,
-       test_file: str | Path,
-       output_file: str | Path,
+       key: str,
+       wfd_file: str | Path,
+       models_dir: str | Path,
+       output_nz_estimate_file: str | Path,
+       output_bhat_file: str | Path,
+       output_nz_samples_file: str | Path | None,    
    ) -> None:
-       # do stuff and write p(z) estimates to "output_file"
 
 Templates for these functions are provided in the file
-``tests/test_{submission}.py`` created as part of the setup.
+``src/nz_data_challenge/{submission_name.py}`` created as part of the
+setup.
 
 
 Format for training and estimation Python functions
@@ -525,31 +530,32 @@ like this:
 ::
 
    def run_taskset_1_training_and_estimation(
-       ddf_files: list[str | Path],
+       key: str,
        wfd_file: str | Path,
-       output_nz_file: str | Path,
+       models_dir: str | Path,
+       ddf_files: list[str | Path],
+       output_nz_estimate_file: str | Path,
        output_bhat_file: str | Path,
+       output_nz_samples_file: str | Path | None,     
    ) -> None:
-       # train a model using the "ddf_files" (and possibly wfd_file)
-       # and write n(z) estimates to "output_nz_file"
-       # and the bin assignments to output_bhat_file
 
 or
 
 ::
 
    def run_taskset_2_training_and_estimation(
-       ddf_files: list[str | Path],
+       key: str,
        wfd_file: str | Path,
-       output_nz_file: str | Path,
+       models_dir: str | Path,
+       ddf_files: list[str | Path],
+       output_nz_estimate_file: str | Path,
        output_bhat_file: str | Path,
+       output_nz_samples_file: str | Path | None,     
    ) -> None:
-       # train a model using the "ddf_files" (and possibly wfd_file)
-       # and write n(z) estimates to "output_nz_file"
-       # and the bin assignments to output_bhat_file
 
 Templates for these functions are provided in the file
-``tests/test_{submission}.py`` created as part of the setup.
+``src/nz_data_challenge/{submission_name}.py`` created as part of the
+setup.
 
 .. _submission-process:
 
@@ -1119,11 +1125,14 @@ catalogs to the files released with the challenge.
       |                 |                        | pipelines to make      |
       |                 |                        | degraded catalogs      |
       +-----------------+------------------------+------------------------+
-      | do_03_merge     | rail-project merge     | Combine spectroscopic  |
+      | nz_00_merge     | rail-project merge     | Combine spectroscopic  |
       |                 |                        | selections             |
       +-----------------+------------------------+------------------------+
-      | do_04_subselect | rail-project subsample | Make train/test files  |
+      | nz_01_subselect | rail-project subsample | Make ddf/wfd files     |
       |                 |                        | from catalogs          |
+      +-----------------+------------------------+------------------------+
+      | nz_02_export    |                        | clean up files and     |
+      |                 |                        | create output tar file |
       +-----------------+------------------------+------------------------+
 
 .. |image| image:: figures/color_color_redshift_taskset_1_cardinal_10yr.png
