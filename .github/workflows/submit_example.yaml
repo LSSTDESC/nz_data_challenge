@@ -36,4 +36,4 @@ jobs:
           if [ -f requirements_${{ matrix.submission }}.txt ]; then pip install -r requirements_${{ matrix.submission }}.txt; fi
       - name: Run unit tests with pytest
         run: |
-          python -m pytest -k ${{ matrix.tasksets }} tests/test_${{ matrix.submission }}.py
+          python -m pytest -k submit_${{ matrix.tasksets }} tests/test_${{ matrix.submission }}.py
