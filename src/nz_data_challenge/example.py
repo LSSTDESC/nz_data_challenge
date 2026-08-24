@@ -213,7 +213,7 @@ def run_taskset_3_estimation_only(
             output_bhat_file.replace("taskset_3", "taskset_2"),
             output_nz_samples_file.replace("taskset_3", "taskset_2"),
         )
-    copy_samples_files(output_nz_samples_file)
+    copy_samples_files(input_nz_samples_file, output_nz_samples_file)
 
 
 def run_taskset_1_training_and_estimation(
@@ -279,4 +279,4 @@ def run_taskset_3_training_and_estimation(
             output_bhat_file.replace("taskset_3", "taskset_2"),
             output_nz_samples_file.replace("taskset_3", "taskset_2"),
         )
-    copy_samples_files(output_nz_samples_file)
+    copy_samples_files(input_nz_samples_file, output_nz_samples_file)
