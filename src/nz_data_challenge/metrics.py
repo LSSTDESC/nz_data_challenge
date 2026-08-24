@@ -44,9 +44,7 @@ def log_loss_from_labels(
     return float(-np.mean(np.log(true_class_probs)))
 
 
-def cohens_kappa(
-    y_true: ArrayLike, y_pred: ArrayLike, num_classes: int = 5
-) -> float:
+def cohens_kappa(y_true: ArrayLike, y_pred: ArrayLike, num_classes: int = 5) -> float:
     """Compute Cohen's Kappa statistic.
 
     Measures inter-rater agreement for categorical items, correcting
@@ -174,9 +172,9 @@ def total_information_loss(
         Array of per-class KL divergences.
     """
     n_classes = len(true_dists)
-    per_class = np.array([
-        kl_divergence(true_dists[k], pred_dists[k]) for k in range(n_classes)
-    ])
+    per_class = np.array(
+        [kl_divergence(true_dists[k], pred_dists[k]) for k in range(n_classes)]
+    )
 
     if weights is None:
         weights = np.ones(n_classes)
@@ -187,9 +185,7 @@ def total_information_loss(
     return total, per_class.tolist()
 
 
-def wasserstein_dist(
-    x: ArrayLike, p: ArrayLike, q: ArrayLike
-) -> float:
+def wasserstein_dist(x: ArrayLike, p: ArrayLike, q: ArrayLike) -> float:
     """Compute the Wasserstein distance between two distributions on ordered bins.
 
     Parameters
@@ -267,8 +263,8 @@ def rms0_delta_summary_stats(
     """
     nz_stats = utils.histogram_stats_2d(nz_distributions, grid_edges)
     nz_true_stats = utils.histogram_stats_2d(true_distributions, grid_edges)
-    del_mean = nz_stats['mean'] - nz_true_stats['mean']
-    del_std = nz_stats['std'] - nz_true_stats['std']
+    del_mean = nz_stats["mean"] - nz_true_stats["mean"]
+    del_std = nz_stats["std"] - nz_true_stats["std"]
     rms0_mean = float(np.sqrt((del_mean * del_mean).mean()))
     rms0_std = float(np.sqrt((del_std * del_std).mean()))
     return {"mean": rms0_mean, "std": rms0_std}
