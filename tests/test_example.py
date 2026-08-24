@@ -46,7 +46,7 @@ def setup_submit_area(request: pytest.FixtureRequest) -> int:
         submit_utils.download_and_extract_tar(SUBMISSION_URL, SUBMIT_DIR)
 
     def teardown_submit_area() -> None:
-        if not os.environ.get("NO_TEARDOWN"):
+        if os.environ.get("TEARDOWN"):
             os.system(f"\\rm -rf {SUBMIT_DIR}")
 
     request.addfinalizer(teardown_submit_area)
@@ -69,7 +69,7 @@ def setup_model_area(request: pytest.FixtureRequest) -> int:
         submit_utils.download_and_extract_tar(MODEL_URL, MODEL_DIR)
 
     def teardown_model_area() -> None:
-        if not os.environ.get("NO_TEARDOWN"):
+        if os.environ.get("TEARDOWN"):
             os.system(f"\\rm -rf {MODEL_DIR}")
 
     request.addfinalizer(teardown_model_area)
