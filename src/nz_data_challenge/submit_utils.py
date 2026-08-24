@@ -12,16 +12,29 @@ import tables_io
 
 from .utils import TASKSETS, SIMS, SCENARIOS, TOMO_BIN_EDGES
 
+# Map the inputs for the various tasksets
+INPUT_TASKSET = dict(
+    taskset_1="taskset_1",
+    taskset_2="taskset_2",
+    taskset_3="taskset_2",  # Reuse taskset 2 files for taskset 3
+)
+
 # This is here in case we can't update the data at NERSC
 NERSC_IS_OUTDATED = True
 
 # don't change this
 if NERSC_IS_OUTDATED:
-    PUBLIC_URL: str = "https://s3df.slac.stanford.edu/people/echarles/data_challenge/public_nz.tgz"
+    PUBLIC_URL: str = (
+        "https://s3df.slac.stanford.edu/people/echarles/data_challenge/public_nz.tgz"
+    )
     BACKUP_URL: str | None = None
 else:
-    PUBLIC_URL: str = "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public_nz.tgz"
-    BACKUP_URL: str | None = "https://s3df.slac.stanford.edu/people/echarles/data_challenge/public_nz.tgz"
+    PUBLIC_URL: str = (
+        "https://portal.nersc.gov/cfs/lsst/PZ/data_challenge/public_nz.tgz"
+    )
+    BACKUP_URL: str | None = (
+        "https://s3df.slac.stanford.edu/people/echarles/data_challenge/public_nz.tgz"
+    )
 
 
 def download_and_extract_tar(
@@ -87,7 +100,7 @@ def setup_public_area() -> None:
         # up in "tests/public"
         download_and_extract_tar(PUBLIC_URL, ".", BACKUP_URL)
 
-        
+
 def check_files(
     nz_file: str | Path,
     bhat_file: str | Path,
@@ -143,7 +156,7 @@ def check_files(
         ) from exc
 
     try:
-        n_objects = qp_ens.ancil['n_objects']
+        n_objects = qp_ens.ancil["n_objects"]
     except Exception as exc:
         raise RuntimeError(
             f"n(z) file {nz_file} does not have 'n_objects' in its ancil table"
@@ -157,9 +170,7 @@ def check_files(
             )
 
     if not Path(bhat_file).exists():
-        raise RuntimeError(
-            f"bhat (bin assignment) file {bhat_file} does not exist"
-        )
+        raise RuntimeError(f"bhat (bin assignment) file {bhat_file} does not exist")
 
     try:
         bhat = tables_io.read(bhat_file)
@@ -169,20 +180,19 @@ def check_files(
             f" by tables_io because {exc}"
         ) from exc
 
-    if 'tomo_bin_index' not in bhat:
+    if "tomo_bin_index" not in bhat:
         raise RuntimeError(
             f"bhat (bin assignment) file {bhat_file} does not contain"
             " 'tomo_bin_index'"
         )
-    if 'object_id' not in bhat:
+    if "object_id" not in bhat:
         raise RuntimeError(
-            f"bhat (bin assignment) file {bhat_file} does not contain"
-            " 'object_id'"
+            f"bhat (bin assignment) file {bhat_file} does not contain" " 'object_id'"
         )
 
-    submit_ids = set(bhat['object_id'])
+    submit_ids = set(bhat["object_id"])
 
-    n_assigned = (bhat['tomo_bin_index'] >= 0).sum()
+    n_assigned = (bhat["tomo_bin_index"] >= 0).sum()
     if n_assigned != n_objects.sum():
         raise RuntimeError(
             f"Number of assigned objects in {bhat_file} ({n_assigned})"
@@ -197,9 +207,68 @@ def check_files(
         )
 
 
+def check_samples_files(
+    samples_file: str | Path,
+    n_tomo_bins: int | None = None,
+    n_realizations: int | None = None,
+) -> None:
+    """Validate photo-z submission files against test data requirements.
+
+    Parameters
+    ----------
+    samples_file
+        Path to the n(z) submission file to validate. Must be in
+        qp-readable format.
+    n_tomo_bins
+        If set, requires that samples_file have this many tomographic bins.
+    n_realizations
+        If set, requires that nz_filesamples_file have this many realizations bins.
+
+
+    Raises
+    ------
+    RuntimeError
+        If validation fails.
+
+    Notes
+    -----
+    The function performs the following checks in order:
+
+    1. file existence
+    3. Presence of ancillary dictionary, and correct columns in ancillary dict
+    4. Correct number of tomographic bins
+    5. Correct number or realizations
+    """
+    if not Path(samples_file).exists():
+        raise RuntimeError(f"n(z) file {samples_file} does not exist")
+
+    try:
+        qp_ens = qp.read(samples_file)
+    except Exception as exc:
+        raise RuntimeError(
+            f"n(z) file {samples_file} could not be read by qp because {exc}"
+        ) from exc
+
+    if n_tomo_bins is not None:
+        check_bins = qp_ens.ancil["bin_idx"].max() + 1
+        if check_bins != n_tomo_bins:
+            raise RuntimeError(
+                f"n(z) file {samples_file} has {check_bins} tomo bins"
+                f" with {n_tomo_bins} expected"
+            )
+
+    if n_realizations is not None:
+        check_bins = qp_ens.ancil["i_realization"].max() + 1
+        if check_bins != n_realizations:
+            raise RuntimeError(
+                f"n(z) file {samples_file} has {check_bins} realizations"
+                f" with {n_realizations} expected"
+            )
+
+
 def check_submission(
     submit_dir: str | Path,
-    tasksets: list[str]=TASKSETS,
+    tasksets: list[str] = TASKSETS,
 ) -> None:
     """Validate all files in a submission against the public test data.
 
@@ -220,18 +289,24 @@ def check_submission(
     """
     OFFSETS = dict(
         taskset_1=0,
-        taskset_2=4_000_000,        
+        taskset_2=4_000_000,
+        taskset_3=4_000_000,
     )
+    N_REALIZATIONS = 100
     for taskset in tasksets:
         id_offset = OFFSETS[taskset]
         tomo_bin_edges = TOMO_BIN_EDGES[taskset]
         n_tomo_bins = len(tomo_bin_edges) - 1
         for sim in SIMS:
-            for scenario in SCENARIOS:                
+            for scenario in SCENARIOS:
                 nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
+                samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"
                 bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-                test_ids = set(np.arange(id_offset, id_offset+1_000_000).astype(int))
-                check_files(nz_file, bhat_file, test_ids, n_tomo_bins)
+                test_ids = set(np.arange(id_offset, id_offset + 1_000_000).astype(int))
+                if taskset in ["taskset_1", "taskset_2"]:
+                    check_files(nz_file, bhat_file, test_ids, n_tomo_bins)
+                else:
+                    check_samples_files(samples_file, n_tomo_bins, N_REALIZATIONS)
                 id_offset += 1_000_000
 
 
@@ -247,15 +322,28 @@ def estimate_only(
         os.makedirs(submit_dir)
     except:
         pass
-    
+
+    input_taskset = INPUT_TASKSET[taskset]
+
     for sim in SIMS:
         for scenario in SCENARIOS:
             key = f"{taskset}_{sim}_{scenario}"
-            wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
+            wfd_file = (
+                f"{public_dir}/nz_challenge_{input_taskset}_{sim}_{scenario}_wfd.hdf5"
+            )
             output_nz_estimate_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
-            output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"            
-            output_bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-            the_function(key, wfd_file, models_dir, output_nz_estimate_file, output_bhat_file, output_nz_samples_file)
+            output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"
+            output_bhat_file = (
+                f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+            )
+            the_function(
+                key,
+                wfd_file,
+                models_dir,
+                output_nz_estimate_file,
+                output_bhat_file,
+                output_nz_samples_file,
+            )
 
 
 def train_and_estimate(
@@ -275,15 +363,30 @@ def train_and_estimate(
         os.makedirs(models_dir)
     except:
         pass
-    
+
+    input_taskset = INPUT_TASKSET[taskset]
+
     for sim in SIMS:
         for scenario in SCENARIOS:
             key = f"{taskset}_{sim}_{scenario}"
-            wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
-            ddf_files = [f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_ddf_{iddf:02}.hdf5" for iddf in range(5)]
+            wfd_file = (
+                f"{public_dir}/nz_challenge_{input_taskset}_{sim}_{scenario}_wfd.hdf5"
+            )
+            ddf_files = [
+                f"{public_dir}/nz_challenge_{input_taskset}_{sim}_{scenario}_ddf_{iddf:02}.hdf5"
+                for iddf in range(5)
+            ]
             output_nz_estimate_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
-            output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"            
-            output_bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-            the_function(key, wfd_file, models_dir, ddf_files, output_nz_estimate_file, output_bhat_file, output_nz_samples_file)
-                
-        
+            output_nz_samples_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_samples_wfd.hdf5"
+            output_bhat_file = (
+                f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+            )
+            the_function(
+                key,
+                wfd_file,
+                models_dir,
+                ddf_files,
+                output_nz_estimate_file,
+                output_bhat_file,
+                output_nz_samples_file,
+            )

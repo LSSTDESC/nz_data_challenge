@@ -32,20 +32,25 @@ def run_taskset_2(
         contains all collected errors.
     """
     submit_dir: str = f"submissions/{submission}"
-    taskset: str = 'taskset_2'
+    taskset: str = "taskset_2"
     except_list: list[Exception] = []
 
     for sim in SIMS:
         for scenario in SCENARIOS:
 
             nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
-            bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+            bhat_file = (
+                f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
+            )
             wfd_file = f"{public_area}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
-            test_ids = set(tables_io.read(wfd_file)['object_id'])
+            test_ids = set(tables_io.read(wfd_file)["object_id"])
 
             try:
                 submit_utils.check_files(
-                    nz_file, bhat_file, test_ids, N_TOMO_BINS,
+                    nz_file,
+                    bhat_file,
+                    test_ids,
+                    N_TOMO_BINS,
                 )
             except Exception as exc:
                 except_list.append(exc)
