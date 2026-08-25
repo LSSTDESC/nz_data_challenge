@@ -3,15 +3,28 @@ import numpy as np
 import os
 from pathlib import Path
 
-from rail.estimation.algos.k_nearneigh import KNearNeighEstimator, KNearNeighInformer
-from rail.estimation.algos.naive_stack import NaiveStackMaskedSummarizer
-from rail.estimation.algos.uniform_binning import UniformBinningClassifier
+try:
+    import tables_io
 
-from rail.core.data import TableHandle, QPHandle
-from rail.utils import catalog_utils
-import tables_io
+    from rail.estimation.algos.k_nearneigh import KNearNeighEstimator, KNearNeighInformer
+    from rail.estimation.algos.naive_stack import NaiveStackMaskedSummarizer
+    from rail.estimation.algos.uniform_binning import UniformBinningClassifier
+    
+    from rail.core.data import TableHandle, QPHandle
+    from rail.utils import catalog_utils
 
-from .utils import TOMO_BIN_EDGES, TASKSETS, SIMS, SCENARIOS
+    # RAIL setup
+    catalog_utils.clear()
+    catalog_utils.load_yaml("tests/catalogs.yaml")
+    CATALOG_TAG = "cardinal_roman_rubin"
+    catalog_utils.apply(CATALOG_TAG)
+    
+    IMPORTS_OK = True
+except ImportError:
+    IMPORTS_OK = False
+    
+
+from .utils import TOMO_BIN_EDGES
 
 # Change these to match the name of the submission
 # and a URL to download the sumission data files
@@ -23,13 +36,6 @@ SUBMISSION_URL: str = (
 MODEL_URL: str = (
     "http://s3df.slac.stanford.edu/people/echarles/data_challenge/nz_models_example.tgz"
 )
-
-
-# RAIL setup
-catalog_utils.clear()
-catalog_utils.load_yaml("tests/catalogs.yaml")
-CATALOG_TAG = "cardinal_roman_rubin"
-catalog_utils.apply(CATALOG_TAG)
 
 
 def get_tomo_bin_edges(

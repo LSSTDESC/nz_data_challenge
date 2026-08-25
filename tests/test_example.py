@@ -18,12 +18,13 @@ try:
         run_taskset_1_training_and_estimation,
         run_taskset_2_training_and_estimation,
         run_taskset_3_training_and_estimation,
-        MODEL_URL
+        MODEL_URL,
+        IMPORTS_OK, 
     )
     FUNCTION_IMPORTS = True
 except ImportError:
     FUNCTION_IMPORTS = False
-
+    
 
 # don't change these
 SUBMIT_DIR: str = f"submission/{SUBMISSION_NAME}"
@@ -114,6 +115,8 @@ def test_example_estimate_only_taskset_1(
     Test fuction to validate a submisson
     """
     assert setup_model_area == 0
+    if not IMPORTS_OK:
+        raise RuntimeError(f"Package imports failed for {SUBMISSION_NAME}")    
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
     test_submit_area = f"submission_test/{SUBMISSION_NAME}"
@@ -134,6 +137,8 @@ def test_example_estimate_only_taskset_2(
     Test fuction to validate a submisson
     """
     assert setup_model_area == 0
+    if not IMPORTS_OK:
+        raise RuntimeError(f"Package imports failed for {SUBMISSION_NAME}")
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
     test_submit_area = f"submission_test/{SUBMISSION_NAME}"
@@ -154,6 +159,8 @@ def test_example_estimate_only_taskset_3(
     Test fuction to validate a submisson
     """
     assert setup_model_area == 0
+    if not IMPORTS_OK:
+        raise RuntimeError(f"Package imports failed for {SUBMISSION_NAME}")    
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
     test_submit_area = f"submission_test/{SUBMISSION_NAME}"
@@ -172,6 +179,8 @@ def test_example_train_and_estimate_taskset_1(
     """
     Test fuction to validate a submisson
     """
+    if not IMPORTS_OK:
+        raise RuntimeError(f"Package imports failed for {SUBMISSION_NAME}")    
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
     test_submit_area = f"submission_test2/{SUBMISSION_NAME}"
@@ -192,6 +201,8 @@ def test_example_train_and_estimate_taskset_2(
     """
     Test fuction to validate a submisson
     """
+    if not IMPORTS_OK:
+        raise RuntimeError(f"Package imports failed for {SUBMISSION_NAME}")    
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
     test_submit_area = f"submission_test2/{SUBMISSION_NAME}"
@@ -212,6 +223,8 @@ def test_example_train_and_estimate_taskset_3(
     """
     Test fuction to validate a submisson
     """
+    if not IMPORTS_OK:
+        raise RuntimeError(f"Package imports failed for {SUBMISSION_NAME}")    
     if not FUNCTION_IMPORTS:
         raise RuntimeError(f"Test functions not imported for {SUBMISSION_NAME}")
     test_submit_area = f"submission_test2/{SUBMISSION_NAME}"
