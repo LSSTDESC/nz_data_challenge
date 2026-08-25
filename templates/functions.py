@@ -1,5 +1,15 @@
 from pathlib import Path
 
+try:
+    import tables_io
+    # Put other imports here, that way if they fail
+    # the SUBMISSION_NAME, SUBMISSION_URL and MODEL_URL
+    # still get set
+    IMPORTS_OK = True
+except ImportError:
+    IMPORTS_OK = False
+   
+
 from .utils import TOMO_BIN_EDGES
 
 # Change these to match the name of the submission
