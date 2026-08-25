@@ -162,13 +162,13 @@ readiness will be evaluated.
 
 The data challenge includes two major parts, with a set of
 tasks emulating increasingly realistic scenarios in each part. The
-first part, the PZ data challenge, assessing per-object $p(z)$ estimation,
+percursor, ``PZ data challenge'', assessing per-object $p(z)$ estimation,
 was launched in April 2026 and will conclude in September 2026.
-The second part, tomography and $n(z)$ estimation, will focus on assigning
+The part desribed here, the ``NZ data challenge'', covering tomography and $n(z)$ estimation, will focus on assigning
 objects to tomographic bins and estimating the distribution of redshifts in
-each bin, and will launch in September 2026.
+each bin, and will launch in September 2026 and conclude in January 2027.
 
-Preliminary results for the NZ part of the challenge will be released in January 2027,
+Preliminary results for the NZ part of the challenge 
 with a technical note summarizing those results to follow shortly thereafter and
 a comprehensive journal publication to follow later.
 
@@ -325,12 +325,12 @@ set of tasks includes 3 subtasks.
       distributions for a set of different scenarios in a specified format.}
   \item{Provide trained models for the different scenarios and a
       Python function that can be used to generate the estimates from subtask
-      1 on an arbitrary dataset.  We will not actually run these ourselves as part of the challenge,
-      but we do ask that you provide timing estimates for how long it took you to run this.}
+      1 on an arbitrary dataset.  We will not actually run these ourselves as part of the submisison validation,
+      but will run them as part of the challenge.}
   \item{Provide a Python function that can be used to
       generate the models and estimates from subtasks 1 and 2 on
-      arbitrary datasets.  We will not actually run these ourselves as part of the challenge,
-      but we do ask that you provide timing estimates for how long it took you to run this.}
+      arbitrary datasets.  Again, will not actually run these ourselves as part of the submisison validation,
+      but will run them as part of the challenge.}
 \end{enumerate}
 
 The $n(z)$ estimates in subtask 1 and the timing estimates should be provided
@@ -340,35 +340,7 @@ described below.
 
 \subsection{Data format for submissions}
 
-\subsubsection{Data format for timing information}
-
-The timing information should be provided as a YAML file containing a nested dictionary, named \texttt{timing.yaml}.
-All times should be given in seconds.  Here is an example:
-
-\begin{verbatim}
-taskset_1:
-  inform:
-    flagship_1yr: 204.34
-    flagship_4yr: 202.21
-    cardinal_1yr: 201.30
-    cardinal_4yr: 207.34
-  estimate:
-    flagship_1yr: 151.71
-    flagship_4yr: 157.15
-    cardinal_1yr: 163.04
-    cardinal_4yr: 158.77
-taskset_2:
-  inform:
-    flagship_1yr: 201.17
-    flagship_4yr: 202.81
-    cardinal_1yr: 208.26
-    cardinal_4yr: 204.71
-  estimate:
-    flagship_1yr: 153.88
-    flagship_4yr: 154.24
-    cardinal_1yr: 161.62
-    cardinal_4yr: 159.63
-\end{verbatim}
+Each submisison will require creating a set of files described below and packaging them in a specific format.
 
 
 \subsubsection{Data format for bin assignments}
@@ -376,7 +348,7 @@ taskset_2:
 The bin assignments should be provided as an HDF5 file containing a dictionary
 with two arrays: object IDs (\texttt{object\_id}) and corresponding bin assignments (\texttt{bhat\_for\_wide\_data}).  The tomographic
 bins should run from 0 to $n_{\rm bins} -1$.  The value $-1$ is reserved as a guard
-value for unassigned objects.  The files should be called \texttt{nz\_challenge\_taskset\_1\_cardinal\_\_bhat\_1yr.hdf5}.
+value for unassigned objects.  The files should be called, e.g., \texttt{nz\_challenge\_taskset\_1\_cardinal\_\_bhat\_1yr.hdf5}.
 
 \begin{verbatim}
 # Interpolated grid
@@ -482,7 +454,6 @@ the descriptions of the various tasks, e.g.,
 \texttt{nz\_challenge\_taskset\_2\_cardinal\_bhat\_1yr.pkl}.
 \end{verbatim}
 
-The timing information file should simply be called \texttt{timing.yaml}.
 All of these files should then be joined into a compressed \texttt{tar} file, which
 should then be placed somewhere it can be downloaded.  The URL for the
 \texttt{tar} file should be specified in
@@ -529,7 +500,13 @@ def run_taskset_2_estimation_only(
 
 Templates for these functions are provided in the file
 \texttt{src/nz\_data\_challenge/\{submission\_name.py\}}
-created as part of the setup.
+created as part of the setup.    The \texttt{models\_dir} area
+can be used to download existing models from a URL that
+can be set in the same file.
+
+\begin{verbatim}
+MODEL_URL = "https://your.institution.edu/submit_example_models.tgz"
+\end{verbatim}
 
 
 \subsection{Format for training and estimation Python functions}
@@ -569,6 +546,10 @@ Templates for these functions are provided in the file
 \texttt{src/nz\_data\_challenge/\{submission\_name\}.py}
 created as part of the setup.
 
+In this case, the \texttt{models\_dir} area is primarily intended
+as a working area to create the models needed by the algorithm.
+
+
 
 \subsection{Submission mechanism}
 
@@ -598,9 +579,9 @@ All three of these files are created by the
 
 You will need to modify the \texttt{src/nz\_data\_challenge/\{submission\_name\}.py} to
 give the location of the \texttt{tar} file containing the $n(z)$ estimates, bin assignments,
-timing estimates, and trained models, and to implement the required functions.
+and trained models, and to implement the required functions.
 
-See \texttt{https://github.com/LSSTDESC/nz\_data\_challenge/pull/6}
+See \texttt{https://github.com/LSSTDESC/nz\_data\_challenge/pull/7}
 for an example of a submission.
 
 
@@ -618,8 +599,10 @@ expected file they check that:
     \item{the $bhat$ file exists;}
     \item{the $bhat$ file contains a two-column table with ``bhat'' assignment and ``object\_id'' for each object.}
     \item{the object\_ids in the submission file match the associated
-        test file.}
+        test file.}      
 \end{enumerate}
+
+For taskset 3, similar checks are performed on the file with the ensemble $n(z)$ samples.
 
 If any of these checks fail, the GitHub action triggered by the
 submission will fail and report the cause of the failure.  \textbf{Note that
@@ -691,8 +674,6 @@ A few scripts are provided to help you.
       for your submission.}
   \item{\texttt{scripts/remove\_submission\_files.py}:  removes the
       submission files if you need to start over.}
-  \item{\texttt{scripts/run\_metrics.py}:  runs performance metrics on
-      files in a submission you have created.}    
   \item{\texttt{py.test tests/test\_\{submission\_name\}.py}:  validates
       all the parts of your submission, checking that you have created
       all the required files and that they are properly formatted.}
