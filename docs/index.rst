@@ -132,14 +132,15 @@ Scope and Timeline
 ------------------
 
 The data challenge includes two major parts, with a set of tasks
-emulating increasingly realistic scenarios in each part. The first part,
-the PZ data challenge, assesssing per-object :math:`p(z)` estimation,
-was launched in April, 2026, and will concluded in September, 2026. The
-second part, tomography and :math:`n(z)` estimation, will focus on
-assigning objects to tomographic bins and estimating the distribution of
-redshifts in each bin, and will launch in September 2026.
+emulating increasingly realistic scenarios in each part. The percursor,
+“PZ data challenge”, assessing per-object :math:`p(z)` estimation, was
+launched in April 2026 and will conclude in September 2026. The part
+desribed here, the “NZ data challenge”, covering tomography and
+:math:`n(z)` estimation, will focus on assigning objects to tomographic
+bins and estimating the distribution of redshifts in each bin, and will
+launch in September 2026 and conclude in January 2027.
 
-Preliminary results will be released in January, 2027, with a technical
+Preliminary results for the NZ part of the challenge with a technical
 note summarizing those results to follow shortly thereafter and a
 comprehensive journal publication to follow later.
 
@@ -319,37 +320,10 @@ functions needed for subtasks 2 and 3 are described below.
 Data format for submissions
 ---------------------------
 
-Data format for timing information
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Each submisison will require creating a set of files described below and
+packaging them in a specific format.
 
-The timing information should be provided as a YAML file containing a
-nested dictionary, named ``timing.yaml``. All times should be given in
-seconds. Here is an example:
 
-::
-
-   taskset_1:
-     inform:
-       flagship_1yr: 204.34
-       flagship_4yr: 202.21
-       cardinal_1yr: 201.30
-       cardinal_4yr: 207.34
-     estimate:
-       flagship_1yr: 151.71
-       flagship_4yr: 157.15
-       cardinal_1yr: 163.04
-       cardinal_4yr: 158.77
-   taskset_2:
-     inform:
-       flagship_1yr: 201.17
-       flagship_4yr: 202.81
-       cardinal_1yr: 208.26
-       cardinal_4yr: 204.71
-     estimate:
-       flagship_1yr: 153.88
-       flagship_4yr: 154.24
-       cardinal_1yr: 161.62
-       cardinal_4yr: 159.63
 
 Data format for bin assignments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -469,8 +443,7 @@ the various tasks, e.g.,
      or
    \texttt{nz\_challenge\_taskset\_2\_cardinal\_bhat\_1yr.pkl}.
 
-The timing information file should simply be called ``timing.yaml``. All
-of these files should then be joined into a compressed ``tar`` file,
+All of these files should then be joined into a compressed ``tar`` file,
 which should then be placed somewhere it can be downloaded. The URL for
 the ``tar`` file should be specified in ``tests/test_{submission}.py``.
 Please take care to avoid putting extra directory structure in the tar
@@ -487,8 +460,9 @@ Format for estimation-only Python functions and trained models
 
 For the second subtask, submissions should provide trained models and
 implement a function to run estimation using those trained models on the
-test files provided for each task set. The function will look something
-like this:
+test files provided for each task set.
+
+The function will look something like this:
 
 ::
 
@@ -517,6 +491,14 @@ or
 Templates for these functions are provided in the file
 ``src/nz_data_challenge/{submission_name.py}`` created as part of the
 setup.
+
+The ``models_dir`` area can be used to download existing models
+from a URL that can be set in the same file.
+
+::
+
+   MODEL_URL = "https://your.institution.edu/submit_example_models.tgz"
+
 
 
 Format for training and estimation Python functions
@@ -556,6 +538,10 @@ or
 Templates for these functions are provided in the file
 ``src/nz_data_challenge/{submission_name}.py`` created as part of the
 setup.
+
+In this case, the ``models_dir`` area is primarily intended as a working
+area to create the models needed by the algorithm.
+
 
 .. _submission-process:
 
@@ -615,6 +601,9 @@ expected file they check that:
 
 #. the object_ids in the submission file match the associated test file.
 
+For taskset 3, similar checks are performed on the file with the
+ensemble :math:`n(z)` samples.   
+   
 If any of these checks fail, the GitHub action triggered by the
 submission will fail and report the cause of the failure. **Note that
 the GitHub actions occasionally fail to download the data files. If this
