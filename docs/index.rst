@@ -842,7 +842,7 @@ do, so both ratios are bounded above by unity.
    :math:`|\Delta S_8| / \sigma(S_8)`, the shift of the inferred
    :math:`S_8` caused by the difference between the submitted and the
    true :math:`n(z)`, in units of its own error bar. Zero is unbiased.
-   Scored against :math:`[0, 0.1]`, :math:`[0, 0.5]` and :math:`[0, 2]`.
+   Scored against :math:`[0, 0.3]`, :math:`[0, 1]` and :math:`[0, 2]`.
 
 -  **Dark energy precision** (3\ :math:`\times`\ 2pt):
    :math:`{\rm FoM}(w_0, w_a) / {\rm FoM}_{\rm perfect}(w_0, w_a)`,
@@ -857,7 +857,7 @@ do, so both ratios are bounded above by unity.
    two dimensions the :math:`68.3\%` contour lies at
    :math:`\sqrt{\chi^2} = 1.52` rather than at 1, so these brackets are
    somewhat stricter here than for the one-dimensional :math:`S_8` bias.
-   Scored against :math:`[0, 0.1]`, :math:`[0, 0.5]` and :math:`[0, 2]`.
+   Scored against :math:`[0, 0.3]`, :math:`[0, 1]` and :math:`[0, 2]`.
 
 The two bias metrics are computed to first order in the residual of the
 data vector. A Fisher bias obtained this way *overestimates* the shift a

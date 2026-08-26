@@ -90,7 +90,7 @@ METRICS: dict[str, dict[str, Any]] = dict(
     s8_bias_cs=dict(
         label=r"Cosmic shear $|\Delta S_8| / \sigma(S_8)$",
         limits=[0, 3],
-        ranges=[[0.0, 0.1], [0.0, 0.5], [0.0, 2.0]],
+        ranges=[[0.0, 0.3], [0.0, 1.0], [0.0, 2.0]],
     ),
     wowa_fom_ratio_3x2pt=dict(
         label=r"3x2pt ${\rm FoM}(w_0,w_a) / {\rm FoM}_{\rm ref}$",
@@ -100,7 +100,7 @@ METRICS: dict[str, dict[str, Any]] = dict(
     wowa_bias_3x2pt=dict(
         label=r"3x2pt $(w_0,w_a)$ bias $\sqrt{\chi^2}$",
         limits=[0, 3],
-        ranges=[[0.0, 0.1], [0.0, 0.5], [0.0, 2.0]],
+        ranges=[[0.0, 0.3], [0.0, 1.0], [0.0, 2.0]],
     ),
 )
 
