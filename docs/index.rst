@@ -820,7 +820,7 @@ predicted from the submitted :math:`n(z)` with the one predicted from
 the true :math:`n(z)` of the same objects then gives the bias induced in
 the cosmological parameters.
 
-**The perfect-tomography reference.** The two precision metrics below
+**The "perfect-tomography" reference.** The two precision metrics below
 are ratios taken against a reference forecast that uses *no* information
 from the submission, so that the same reference applies to every
 submission of a given simulation and scenario. In the reference, objects
