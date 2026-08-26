@@ -140,7 +140,7 @@ def check_files(
     3. Presence of ancillary dictionary and 'n_objects' in ancillary data
     4. Correct number of tomographic bins
     5. bhat file existence
-    6. bhat file is tables_io readable and has 'bhat_for_wide_data' and
+    6. bhat file is tables_io readable and has 'tomo_bin_index' and
        'object_id' columns
     7. Matching number of objects
     8. Matching object_id columns in bhat_file against test_file

@@ -302,20 +302,21 @@ of tasks includes 3 subtasks.
 
 #. Provide trained models for the different scenarios and a Python
    function that can be used to generate the estimates from subtask 1 on
-   an arbitrary dataset. We will not actually run these ourselves as
-   part of the challenge, but we do ask that you provide timing
-   estimates for how long it took you to run this.
+   an arbitrary dataset. GitHub Actions will not run these functions as
+   part of submission validation, but they may be run later as part of
+   the challenge.
 
 #. Provide a Python function that can be used to generate the models and
-   estimates from subtasks 1 and 2 on arbitrary datasets. We will not
-   actually run these ourselves as part of the challenge, but we do ask
-   that you provide timing estimates for how long it took you to run
-   this.
+   estimates from subtasks 1 and 2 on arbitrary datasets. Again, GitHub
+   Actions will not run these as part of submission validation, but they
+   may be run later as part of the challenge.
 
-The :math:`n(z)` estimates in subtask 1 and the timing estimates should
-be provided in a compressed ``tar`` file. Any models used in subtask 2
-should be provided separately. Templates and instructions for the Python
-functions needed for subtasks 2 and 3 are described below.
+The :math:`n(z)` estimates, bin assignments, and (for taskset 3)
+:math:`n(z)` samples from subtask 1 should be provided in a compressed
+``tar`` file. A ``timing.yaml`` file is not required and is not checked
+by CI. Any models used in subtask 2 should be provided in a separate
+``tar`` file. Templates and instructions for the Python functions needed
+for subtasks 2 and 3 are described below.
 
 Data format for submissions
 ---------------------------
@@ -330,19 +331,29 @@ Data format for bin assignments
 
 The bin assignments should be provided as an HDF5 file containing a
 dictionary with two arrays: object IDs (``object_id``) and corresponding
-bin assignments (``bhat_for_wide_data``). The tomographic bins should
+bin assignments (``tomo_bin_index``). The tomographic bins should
 run from 0 to :math:`n_{\rm bins} -1`. The value :math:`-1` is reserved
 as a guard value for unassigned objects. The files should be called
-``nz_challenge_taskset_1_cardinal__bhat_1yr.hdf5``.
+e.g. ``nz_challenge_taskset_1_cardinal_1yr_bhat_wfd.hdf5``.
+
+Format tests do **not** read catalog IDs from the public WFD files.
+``submit_utils.check_submission`` currently compares ``object_id`` to
+sequential integers: taskset 1 starts at 0, tasksets 2 and 3 start at
+4,000,000, then add 1,000,000 for each ``(simulation, scenario)``
+combination in the order cardinal/flagship × 1yr/4yr. Write those IDs
+(not the simulation ``object_id`` column) unless the validator is
+updated.
 
 ::
 
-   # Interpolated grid
+   import numpy as np
    import tables_io
 
+   n = 1_000_000
+   start = 0  # taskset_1_cardinal_1yr; see check_submission offsets
    data_dict = dict(
-       bhat_for_wide_data=bin_assignments, 
-       object_id=wfd_data['object_id'],
+       tomo_bin_index=bin_assignments,
+       object_id=np.arange(start, start + n),
    )
    tables_io.write(data_dict, <output_filename.hdf5>)
 
@@ -362,7 +373,7 @@ well as interpolated grids, histograms, and others.
 For users unfamiliar with ``qp``, we highly recommend representing the
 :math:`n(z)` as either a histogram grid or a Gaussian mixture model. The
 files should be called
-``nz_challenge_taskset_1_cardinal__nz_estimate_1yr.hdf5``.
+e.g. ``nz_challenge_taskset_1_cardinal_1yr_nz_estimate_wfd.hdf5``.
 
 ::
 
@@ -429,30 +440,31 @@ sample realization number associated with each PDF can be added to a
 Packaging submission files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The submission files should use the same file name conventions defined
-in `<tab:file_fields>`_. The labels will typically be
-``nz_estimate`` (for the :math:`n(z)` estimates) and ``bhat_estimate``
-(for the bin assignments), and will be specified in the descriptions of
-the various tasks, e.g.,
+Submission products unpacked by CI use names of the form
+``nz_challenge_{taskset}_{simulation}_{scenario}_{label}_wfd.hdf5``,
+where ``label`` is ``nz_estimate`` or ``bhat`` (tasksets 1 and 2) or
+``nz_samples`` (taskset 3), e.g.,
 
 ::
 
-   \texttt{nz\_challenge\_taskset\_2\_cardinal\-\_nz\_estimate\_1yr.hdf5}
+   nz_challenge_taskset_1_cardinal_1yr_nz_estimate_wfd.hdf5
      or
-   \texttt{nz\_challenge\_taskset\_2\_cardinal\-\_nz\_samples\_1yr.hdf5}
+   nz_challenge_taskset_1_cardinal_1yr_bhat_wfd.hdf5
      or
-   \texttt{nz\_challenge\_taskset\_2\_cardinal\_bhat\_1yr.pkl}.
+   nz_challenge_taskset_3_cardinal_1yr_nz_samples_wfd.hdf5
 
-All of these files should then be joined into a compressed ``tar`` file,
-which should then be placed somewhere it can be downloaded. The URL for
-the ``tar`` file should be specified in ``tests/test_{submission}.py``.
-Please take care to avoid putting extra directory structure in the tar
-file, i.e., we would like to uncompress it directly to the target area.
+All of these files should then be joined into a compressed ``tar`` file
+with no extra top-level directory, hosted at a URL that GitHub Actions
+can fetch without authentication. Set that URL as ``SUBMISSION_URL`` in
+``src/nz_data_challenge/{submission}.py`` (the tests import it). Models
+for subtask 2 go in a second ``tar`` file whose URL is ``MODEL_URL`` in
+the same module.
 
 ::
 
    SUBMISSION_NAME = "example"
    SUBMISSION_URL = "https://your.institution.edu/submit_example.tgz"
+   MODEL_URL = "https://your.institution.edu/submit_example_models.tgz"
 
    
 Format for estimation-only Python functions and trained models
@@ -552,10 +564,13 @@ Submission process
 Submissions will take the form of a pull request on the
 ``nz_data_challenge`` repository and will include:
 
-#. A file ``tests/test_{submission}.py`` that includes the URL from
-   which the compressed ``tar`` file should be downloaded as well as the
-   Python functions for subtasks 2 and 3. When created this will contain
-   empty placeholder functions that will need to be implemented.
+#. A file ``src/nz_data_challenge/{submission}.py`` that includes
+   ``SUBMISSION_URL`` / ``MODEL_URL`` and the Python functions for
+   subtasks 2 and 3. When created this will contain empty placeholder
+   functions that will need to be implemented.
+
+#. A file ``tests/test_{submission}.py`` that includes the test
+   functions that import those URLs and run the user-provided code.
 
 #. A file ``requirements_{submission}.txt`` that should be modified to
    include ``pip`` package names of any packages that need to be
@@ -566,15 +581,14 @@ Submissions will take the form of a pull request on the
    modified unless the prerequisite installation requires more than just
    ``pip``-installing packages.
 
-All three of these files are created by the
+All four of these files are created by the
 ``scripts/prepare_submission.py`` script.
 
-You will need to modify the ``tests/test_{submission}.py`` to give the
-location of the ``tar`` file containing the :math:`n(z)` estimates, bin
-assignments, timing estimates, and trained models, and to implement the
-required functions.
+You will need to modify ``src/nz_data_challenge/{submission}.py`` to
+give the locations of the estimate and model ``tar`` files and to
+implement the required functions.
 
-See ``https://github.com/LSSTDESC/nz_data_challenge/pull/6`` for an
+See ``https://github.com/LSSTDESC/nz_data_challenge/pull/7`` for an
 example of a submission.
 
 Submission validation
@@ -584,7 +598,8 @@ The wrapping functions provided in the ``tests/test_{submission}.py``
 file implement a number of checks on the data. Specifically, for each
 expected file they check that:
 
-#. the :math:`n(z)` file exists;
+#. the :math:`n(z)` file exists (name
+   ``nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5``);
 
 #. the :math:`n(z)` file contains a valid ``qp`` ensemble with the
    expected number of :math:`n(z)` pdfs;
@@ -594,31 +609,37 @@ expected file they check that:
 #. the ancillary data includes a “n_objects” column with numbers of
    objects assigned to each bin;
 
-#. the :math:`bhat` file exists;
+#. the :math:`bhat` file exists (name
+   ``nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5``);
 
-#. the :math:`bhat` file contains a two-column table with “bhat”
-   assignment and “object_id” for each object.
+#. the :math:`bhat` file contains ``tomo_bin_index`` and ``object_id``
+   for each object;
 
-#. the object_ids in the submission file match the associated test file.
+#. the ``object_id`` values match the sequential IDs constructed by
+   ``submit_utils.check_submission`` (not the catalog IDs in the public
+   WFD files).
 
-For taskset 3, similar checks are performed on the file with the
-ensemble :math:`n(z)` samples.   
-   
+For taskset 3, similar checks are performed on the
+``..._nz_samples_wfd.hdf5`` ensemble :math:`n(z)` samples.
+
+GitHub Actions only run ``pytest -k submit_{taskset}`` (format checks on
+the hosted estimates tar). They do not retrain models and do not require
+``timing.yaml``.
+
 If any of these checks fail, the GitHub action triggered by the
 submission will fail and report the cause of the failure. **Note that
 the GitHub actions occasionally fail to download the data files. If this
 happens, simply re-running the action typically succeeds.**
 
-The easiest way to test that you have correctly implemented the required
-functions is simply to run these commands.
+The easiest way to test that your hosted tar matches CI is:
 
 ::
 
    # Make sure that you have installed any packages you need
-   pip install -r requirement_{submission_name}.txt
+   pip install -r requirements_{submission_name}.txt
 
-   # Run the functions you have provided as unit tests
-   py.test tests/test_{submission_name}.py
+   # Format checks only (same as GitHub Actions)
+   python -m pytest -k submit_ tests/test_{submission_name}.py
 
 If this succeeds, you can use a provided script to help you open the
 pull request for your submission.
@@ -640,12 +661,14 @@ not run them. In short, the commands are:
 
    # Add your files to git
    git add .github/workflows/submit_example.yaml
+     src/nz_data_challenge/example.py
      requirements_example.txt
      tests/test_example.py
 
    # Commit your files to your branch: 
    git commit -m "Submitting {submission_name}"
      .github/workflows/submit_{submission_name}.yaml
+     src/nz_data_challenge/{submission_name}.py
      requirements_{submission_name}.txt
      tests/test_{submission_name}.py
 
@@ -655,6 +678,8 @@ not run them. In short, the commands are:
    # Pushing to git should give you a URL that you can visit to create a
    # pull request, for example:
    #   https://github.com/LSSTDESC/nz_data_challenge/pull/new/submit/example
+   # If you do not have write access to LSSTDESC/nz_data_challenge, push
+   # to a fork and open the pull request from there.
    # Visit that URL and create a pull request, then add the 'submission'
    # label to the PR.
    # Finally, make sure that the github action validating your submission
@@ -680,9 +705,8 @@ A few scripts are provided to help you.
 -  ``scripts/run_metrics.py``: runs performance metrics on files in a
    submission you have created.
 
--  ``py.test tests/test_{submission_name}.py``: validates all the parts
-   of your submission, checking that you have created all the required
-   files and that they are properly formatted.
+-  ``python -m pytest -k submit_ tests/test_{submission_name}.py``:
+   format-checks the hosted estimates tar (same tests as GitHub Actions).
 
 .. _metrics:
 
