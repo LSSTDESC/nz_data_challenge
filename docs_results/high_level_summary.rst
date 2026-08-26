@@ -68,6 +68,22 @@ submission:
      - .. image:: results/rms0_delta_std.png
           :width: 600px
           :align: center
+   * - **Cosmic shear structure growth precision**
+     - .. image:: results/s8_precision_cs.png
+          :width: 600px
+          :align: center
+   * - **Cosmic shear structure growth bias**
+     - .. image:: results/s8_bias_cs.png
+          :width: 600px
+          :align: center
+   * - **3x2pt dark energy precision**
+     - .. image:: results/wowa_fom_ratio_3x2pt.png
+          :width: 600px
+          :align: center
+   * - **3x2pt dark energy bias**
+     - .. image:: results/wowa_bias_3x2pt.png
+          :width: 600px
+          :align: center
 
 
 .. list-table:: Image Gallery
