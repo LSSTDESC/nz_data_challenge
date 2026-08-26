@@ -802,24 +802,70 @@ Metrics for cosmology analysis (Fisher forecasts)
 
 We also estimate how well each algorithm would perform in the context of
 cosmological analyses by running Fisher matrix forecasts using the
-``fisherA2Z`` package. For each submission we compute the
-:math:`w_0`–:math:`w_a` dark energy Figure of Merit (FoM), defined as
-the inverse area of the :math:`1\sigma` contour in the
-:math:`w_0`–:math:`w_a` plane, under two analysis configurations:
+``fisherA2Z`` package. Two forecasts are run for each submission,
+simulation and scenario:
 
--  **Cosmic Shear FoM**: A Fisher forecast using only the cosmic shear
+-  **Cosmic shear**: A Fisher forecast using only the cosmic shear
    two-point correlation function.
 
--  **3\ :math:`\times`\ 2pt FoM**: A Fisher forecast using the full
+-  **3\ :math:`\times`\ 2pt**: A Fisher forecast using the full
    combination of cosmic shear, galaxy–galaxy lensing, and galaxy
    clustering (the “3\ :math:`\times`\ 2pt” data vector).
 
-These forecasts use the submitted :math:`n(z)` estimates and the true
-:math:`n(z)` distributions to quantify the bias in cosmological
-parameters induced by errors in the redshift distributions. The forecast
-accounts for survey-specific parameters including the effective source
-number density per tomographic bin, fractional sky coverage, and
-per-component ellipticity dispersion.
+Both use the submitted :math:`n(z)` estimates and bin assignments,
+together with survey-specific parameters: the effective source number
+density per tomographic bin, the fractional sky coverage, and the
+per-component ellipticity dispersion. Comparing the data vector
+predicted from the submitted :math:`n(z)` with the one predicted from
+the true :math:`n(z)` of the same objects then gives the bias induced in
+the cosmological parameters.
+
+**The "perfect-tomography" reference.** The two precision metrics below
+are ratios taken against a reference forecast that uses *no* information
+from the submission, so that the same reference applies to every
+submission of a given simulation and scenario. In the reference, objects
+are placed in tomographic bins by their *true* redshift using the fixed
+bin edges defined for the task set, each bin’s :math:`n(z)` is the
+true-redshift histogram of the objects placed in it, and the effective
+number density follows from the resulting counts. The :math:`n(z)` is
+then treated as exactly known. This is the best that any algorithm could
+do, so both ratios are bounded above by unity.
+
+-  **Structure growth precision** (cosmic shear):
+   :math:`\sigma_{\rm perfect}(S_8) / \sigma(S_8)`, with
+   :math:`S_8 = \sigma_8\sqrt{\Omega_m/0.3}` and :math:`\sigma(S_8)`
+   the marginalized Fisher uncertainty. A value of 1 means the
+   submission costs nothing relative to perfect tomography. Scored
+   against :math:`[0.95, 1]`, :math:`[0.8, 1]` and :math:`[0.5, 1]`.
+
+-  **Structure growth bias** (cosmic shear):
+   :math:`|\Delta S_8| / \sigma(S_8)`, the shift of the inferred
+   :math:`S_8` caused by the difference between the submitted and the
+   true :math:`n(z)`, in units of its own error bar. Zero is unbiased.
+   Scored against :math:`[0, 0.3]`, :math:`[0, 1]` and :math:`[0, 2]`.
+
+-  **Dark energy precision** (3\ :math:`\times`\ 2pt):
+   :math:`{\rm FoM}(w_0, w_a) / {\rm FoM}_{\rm perfect}(w_0, w_a)`,
+   where the Figure of Merit is the inverse area of the :math:`1\sigma`
+   contour in the marginalized :math:`w_0`–:math:`w_a` plane. Scored
+   against :math:`[0.95, 1]`, :math:`[0.8, 1]` and :math:`[0.5, 1]`.
+
+-  **Dark energy bias** (3\ :math:`\times`\ 2pt): the induced shift
+   :math:`\Delta` in the marginalized :math:`w_0`–:math:`w_a` plane,
+   measured against that plane’s covariance,
+   :math:`\sqrt{\Delta^{T} C_{2\times2}^{-1} \Delta}`. Note that in
+   two dimensions the :math:`68.3\%` contour lies at
+   :math:`\sqrt{\chi^2} = 1.52` rather than at 1, so these brackets are
+   somewhat stricter here than for the one-dimensional :math:`S_8` bias.
+   Scored against :math:`[0, 0.3]`, :math:`[0, 1]` and :math:`[0, 2]`.
+
+The two bias metrics are computed to first order in the residual of the
+data vector. A Fisher bias obtained this way *overestimates* the shift a
+real analysis would suffer, because the Fisher posterior is centred on
+the centre of the prior, whereas an MCMC handed a biased data vector
+moves the photometric redshift nuisance parameters toward their true
+values and calibrates part of the systematic away. The numbers should
+therefore be read as a conservative bound.
 
 	 
 

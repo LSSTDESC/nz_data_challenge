@@ -3,6 +3,7 @@
 import glob
 import os
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -13,10 +14,17 @@ import pandas as pd
 import qp
 import tables_io
 import yaml
+from fisherA2Z.fisher_flex import FisherFlex, FisherFlexBias, FisherFlexResult
 from jinja2 import Template
 
 from . import metrics, utils, forecast
 from .utils import TASKSETS, SIMS, SCENARIOS
+
+# Scale cuts for every Fisher forecast.  This must stay in step with the
+# identical dict inside forecast.fisher_forecast / forecast.fisher_bias_forecast:
+# the reference forecast built here is only comparable to the submission's if
+# both are evaluated under the same cuts.
+FISHER_FORECAST_PARAMS: dict[str, Any] = dict(ell_max_cs=1800, ell_min_cs=300)
 
 # Colors for n(z) plots
 TOMO_BIN_COLORS = [
@@ -73,6 +81,26 @@ METRICS: dict[str, dict[str, Any]] = dict(
         label="Total information loss [bits]",
         limits=[0, 0.1],
         ranges=[[0, 0.01], [0.0, 0.02], [0.0, 0.03]],
+    ),
+    s8_precision_cs=dict(
+        label=r"Cosmic shear $\sigma(S_8)_{\rm ref} / \sigma(S_8)$",
+        limits=[0, 1],
+        ranges=[[0.95, 1.0], [0.8, 1.0], [0.5, 1.0]],
+    ),
+    s8_bias_cs=dict(
+        label=r"Cosmic shear $|\Delta S_8| / \sigma(S_8)$",
+        limits=[0, 3],
+        ranges=[[0.0, 0.3], [0.0, 1.0], [0.0, 2.0]],
+    ),
+    wowa_fom_ratio_3x2pt=dict(
+        label=r"3x2pt ${\rm FoM}(w_0,w_a) / {\rm FoM}_{\rm ref}$",
+        limits=[0, 1],
+        ranges=[[0.95, 1.0], [0.8, 1.0], [0.5, 1.0]],
+    ),
+    wowa_bias_3x2pt=dict(
+        label=r"3x2pt $(w_0,w_a)$ bias $\sqrt{\chi^2}$",
+        limits=[0, 3],
+        ranges=[[0.0, 0.3], [0.0, 1.0], [0.0, 2.0]],
     ),
 )
 
@@ -183,6 +211,125 @@ def evaluate_distributions(
         per_bin_information_lost=per_bin_loss,
         rms0_delta_mean=rms0_delta_summary_stats["mean"],
         rms0_delta_std=rms0_delta_summary_stats["std"],
+    )
+    return the_dict
+
+
+@lru_cache(maxsize=None)
+def perfect_forecast(
+    taskset: str,
+    sim: str,
+    scenario: str,
+    mode: str,  # '3x2pt' | '2x2pt' | 'cosmic_shear'
+    truth_file: str,
+) -> FisherFlexResult:
+    """Fisher forecast for perfect tomography, from the truth catalog alone.
+
+    Objects are placed in tomographic bins by their *true* redshift using the
+    challenge's fixed bin edges, each bin's n(z) is the true-redshift histogram
+    of the objects in it, and the effective number density follows from the
+    resulting counts.  The n(z) is then treated as exactly known
+    (``nz_model='no_uncertainty'``).
+
+    Nothing from any submission enters, so the result is common to all of them
+    and can serve as the reference the precision metrics are measured against.
+    Cached, since it is the same for every submission of a given run.
+
+    Parameters
+    ----------
+    taskset
+        Name of the taskset, used to look up the tomographic bin edges.
+    sim
+        Name of the simulation ('cardinal' or 'flagship').
+    scenario
+        Name of the scenario ('1yr' or '4yr').
+    mode
+        Analysis mode: '3x2pt', '2x2pt', or 'cosmic_shear'.
+    truth_file
+        Path to the truth file, which must have a 'redshift' column.  Passed as
+        a string rather than the loaded table so the result can be cached.
+
+    Returns
+    -------
+    FisherFlexResult
+        Fisher forecast result object from fisherA2Z.
+    """
+    truth = tables_io.read(truth_file)
+    true_redshifts = truth["redshift"]
+
+    tomo_bin_edges = utils.TOMO_BIN_EDGES[taskset]
+    n_tomo_bins = len(tomo_bin_edges) - 1
+
+    true_assignments = utils.get_true_bin_assignments(true_redshifts, tomo_bin_edges)
+    nz_perfect = utils.get_true_nz_distributions(
+        true_redshifts,
+        true_assignments,
+        forecast.FORECAST_Z_GRID_FULL,
+        n_tomo_bins,
+    )
+    counts = np.bincount(true_assignments, minlength=n_tomo_bins)
+    neff = forecast.tomo_bins_effective_density(counts, taskset, sim, scenario)
+
+    flex = FisherFlex(
+        nz_source=nz_perfect,
+        z_grid=forecast.FORECAST_Z_GRID,
+        neff_source=neff,
+        fsky=forecast.FORECAST_FSKY,
+        sigma_e=forecast.FORECAST_SIGMA_E,
+        mode=mode,
+        nz_model="no_uncertainty",
+    )
+    flex.compute(parallel=True)
+    return flex.forecast(**FISHER_FORECAST_PARAMS)
+
+
+def evaluate_fisher_forecasts(
+    res_cs: FisherFlexResult,
+    bias_cs: FisherFlexBias,
+    res_3x2pt: FisherFlexResult,
+    bias_3x2pt: FisherFlexBias,
+    ref_cs: FisherFlexResult,
+    ref_3x2pt: FisherFlexResult,
+) -> dict[str, float]:
+    """Reduce the Fisher forecasts to four single-number metrics.
+
+    Structure growth is measured with cosmic shear and dark energy with the
+    3x2pt data vector.  The two precision metrics are ratios against the
+    perfect-tomography reference, so 1 means the submission costs nothing; the
+    two bias metrics are in units of the corresponding error bar, so 0 means
+    unbiased.
+
+    Parameters
+    ----------
+    res_cs, res_3x2pt
+        Forecasts using the submitted n(z) and bin assignments.
+    bias_cs, bias_3x2pt
+        Parameter biases of those forecasts against the true n(z).
+    ref_cs, ref_3x2pt
+        The corresponding :func:`perfect_forecast` references.
+
+    Returns
+    -------
+    dict
+        The four scored metrics, plus the raw ingredients of the two ratios.
+    """
+    s8_err = res_cs.s8()[1]
+    s8_err_perfect = ref_cs.s8()[1]
+    fom = res_3x2pt.fom("w_0", "w_a")
+    fom_perfect = ref_3x2pt.fom("w_0", "w_a")
+
+    the_dict: dict[str, float] = dict(
+        # Perfect tomography is the best case, so both ratios should already be
+        # <= 1.  Clip anyway: a submission that beats the reference by a hair
+        # would otherwise fall outside every scoring range and get zero points.
+        s8_precision_cs=float(min(s8_err_perfect / s8_err, 1.0)),
+        s8_bias_cs=float(abs(bias_cs.s8()[3])),
+        wowa_fom_ratio_3x2pt=float(min(fom / fom_perfect, 1.0)),
+        wowa_bias_3x2pt=float(bias_3x2pt.bias_2d("w_0", "w_a").n_sigma),
+        # Unscored, so the ratios can be re-derived from the results file.
+        s8_err_cs=float(s8_err),
+        s8_err_cs_perfect=float(s8_err_perfect),
+        wowa_fom_3x2pt_perfect=float(fom_perfect),
     )
     return the_dict
 
@@ -388,6 +535,16 @@ def evaluate_submission(
                     truth=truth,
                 )
 
+                # The reference the precision metrics are measured against.
+                # Depends only on the truth catalog, and is cached, so it is
+                # computed once and shared by every submission.
+                ref_cs = perfect_forecast(
+                    taskset, sim, scenario, "cosmic_shear", str(truth_file)
+                )
+                ref_3x2pt = perfect_forecast(
+                    taskset, sim, scenario, "3x2pt", str(truth_file)
+                )
+
                 full_output[key] = evaluate_bin_assignments(
                     true_assignments, bin_assignments
                 )
@@ -400,8 +557,18 @@ def evaluate_submission(
                     )
                 )
                 full_output[key].update(
-                    wowa_fom_cs=res_cs.fom("w_0", "w_a"),
-                    wowa_fom_3x2pt=res_3x2pt.fom("w_0", "w_a"),
+                    wowa_fom_cs=float(res_cs.fom("w_0", "w_a")),
+                    wowa_fom_3x2pt=float(res_3x2pt.fom("w_0", "w_a")),
+                )
+                full_output[key].update(
+                    **evaluate_fisher_forecasts(
+                        res_cs,
+                        bias_res_cs,
+                        res_3x2pt,
+                        bias_res_3x2pt,
+                        ref_cs,
+                        ref_3x2pt,
+                    )
                 )
 
                 fig_confusion = plot_confusion_matrix(
@@ -420,7 +587,7 @@ def evaluate_submission(
                     corner_params, fig=fig_cs, shifted_contour=True, color="C1"
                 )
 
-                fig_3x2pt = res_cs.corner(corner_params, color="C3", label="3x2pt")
+                fig_3x2pt = res_3x2pt.corner(corner_params, color="C3", label="3x2pt")
                 fig_3x2pt.legend(loc="upper right", fontsize=10)
                 bias_res_3x2pt.corner_arrows(
                     corner_params, fig=fig_3x2pt, shifted_contour=True, color="C1"
@@ -701,11 +868,13 @@ def extract_score_matrix(
     mask = scores_df["submission"] == submisison
     sub_data = scores_df[mask]
 
-    score_matrix = np.zeros((len(sub_data), len(METRICS)), dtype=int)
+    # (n_metrics, n_runs), which is the orientation plot_score_matrix labels.
+    score_matrix = np.zeros((len(METRICS), len(sub_data)), dtype=int)
 
-    for i in range(len(sub_data)):
-        for j, metric in enumerate(METRICS):
-            score_matrix[j, i] = sub_data[metric][i]
+    for j, metric in enumerate(METRICS):
+        # to_numpy() so this is positional: scores_df keeps its global index,
+        # so the labels of the second and later submissions do not start at 0.
+        score_matrix[j] = sub_data[metric].to_numpy()
 
     return score_matrix
 
