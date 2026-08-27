@@ -199,6 +199,7 @@ def check_files(
 
 def check_submission(
     submit_dir: str | Path,
+    public_dir: str | Path,
     tasksets: list[str]=TASKSETS,
 ) -> None:
     """Validate all files in a submission against the public test data.
@@ -218,21 +219,17 @@ def check_submission(
     RuntimeError
         If any file fails validation checks performed by check_files.
     """
-    OFFSETS = dict(
-        taskset_1=0,
-        taskset_2=4_000_000,        
-    )
     for taskset in tasksets:
-        id_offset = OFFSETS[taskset]
         tomo_bin_edges = TOMO_BIN_EDGES[taskset]
         n_tomo_bins = len(tomo_bin_edges) - 1
         for sim in SIMS:
-            for scenario in SCENARIOS:                
+            for scenario in SCENARIOS:
+                wfd_file = f"{public_dir}/nz_challenge_{taskset}_{sim}_{scenario}_wfd.hdf5"
                 nz_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_nz_estimate_wfd.hdf5"
                 bhat_file = f"{submit_dir}/nz_challenge_{taskset}_{sim}_{scenario}_bhat_wfd.hdf5"
-                test_ids = set(np.arange(id_offset, id_offset+1_000_000).astype(int))
+                wfd_data = tables_io.read(wfd_file)
+                test_ids = set(wfd_data['object_id']) 
                 check_files(nz_file, bhat_file, test_ids, n_tomo_bins)
-                id_offset += 1_000_000
 
 
 def estimate_only(
