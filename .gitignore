@@ -11,6 +11,7 @@ __pycache__/
 .Python
 _version.py
 build/
+public
 public/
 develop-eggs/
 dist/
