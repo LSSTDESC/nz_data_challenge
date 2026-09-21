@@ -9,6 +9,8 @@ import numpy as np
 import qp
 import tables_io
 import xgboost as xgb
+from minisom import MiniSom
+from scipy.spatial.distance import cdist
 
 from .utils import TOMO_BIN_EDGES, Z_BIN_EDGES
 
@@ -101,12 +103,58 @@ def extract_features(data_dict: Dict[str, np.ndarray]) -> np.ndarray:
     return np.column_stack(features)
 
 
+def compute_som_density_weights(
+    X_train: np.ndarray,
+    X_target: np.ndarray,
+    n_neurons: int = 16,
+    subsample_target: int = 40000,
+) -> np.ndarray:
+    """Compute transfer weights w(x) = P_target(x) / P_train(x) via Self-Organizing Map."""
+    feat_dim = min(8, X_train.shape[1])
+    mu = np.mean(X_train[:, :feat_dim], axis=0)
+    std = np.std(X_train[:, :feat_dim], axis=0) + 1e-5
+    
+    Z_tr = (X_train[:, :feat_dim] - mu) / std
+    Z_te = (X_target[:, :feat_dim] - mu) / std
+    
+    if len(Z_te) > subsample_target:
+        rng = np.random.default_rng(42)
+        Z_te_sub = Z_te[rng.choice(len(Z_te), size=subsample_target, replace=False)]
+    else:
+        Z_te_sub = Z_te
+        
+    som = MiniSom(n_neurons, n_neurons, feat_dim, sigma=1.2, learning_rate=0.4, random_seed=42)
+    som.train(Z_tr[: min(len(Z_tr), 15000)], num_iteration=600, verbose=False)
+    
+    win_tr = np.array([som.winner(x) for x in Z_tr])
+    win_te = np.array([som.winner(x) for x in Z_te_sub])
+    
+    idx_tr = win_tr[:, 0] * n_neurons + win_tr[:, 1]
+    idx_te = win_te[:, 0] * n_neurons + win_te[:, 1]
+    
+    n_cells = n_neurons * n_neurons
+    counts_tr = np.bincount(idx_tr, minlength=n_cells).astype(float)
+    counts_te = np.bincount(idx_te, minlength=n_cells).astype(float)
+    
+    norm_tr = counts_tr / (counts_tr.sum() + 1e-8)
+    norm_te = counts_te / (counts_te.sum() + 1e-8)
+    
+    eps = 1e-4
+    cell_weights = (norm_te + eps) / (norm_tr + eps)
+    cell_weights = np.clip(cell_weights, 0.1, 5.0)
+    cell_weights /= np.mean(cell_weights)
+    
+    weights = cell_weights[idx_tr]
+    return weights
+
+
 def train_pontifex_pipeline(
     ddf_files: List[Union[str, Path]],
     key: str,
     models_dir: Union[str, Path],
+    wfd_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[xgb.XGBClassifier, np.ndarray]:
-    """Train XGBoost tomographic bin classifier and build empirical calibration histograms."""
+    """Train XGBoost tomographic bin classifier with SOM transfer reweighting and build empirical calibration histograms."""
     taskset = key[0:9]
     tomo_edges = TOMO_BIN_EDGES[taskset]
     grid_edges = Z_BIN_EDGES[taskset]
@@ -133,6 +181,16 @@ def train_pontifex_pipeline(
     y_true = np.digitize(z_clean, tomo_edges[1:-1])
     X = extract_features(combined_clean)
 
+    # Compute SOM transfer density ratio weights if WFD target data is available
+    sample_weights = None
+    if wfd_file is not None and Path(wfd_file).exists():
+        try:
+            wfd_sample = tables_io.read(wfd_file)
+            X_wfd = extract_features(wfd_sample)
+            sample_weights = compute_som_density_weights(X, X_wfd)
+        except Exception:
+            sample_weights = None
+
     clf = xgb.XGBClassifier(
         n_estimators=180,
         max_depth=6,
@@ -144,14 +202,19 @@ def train_pontifex_pipeline(
         random_state=42,
         eval_metric='mlogloss',
     )
-    clf.fit(X, y_true)
+    clf.fit(X, y_true, sample_weight=sample_weights)
 
-    # Reconstruct training empirical n(z) for each bin
+    # Reconstruct training empirical n(z) for each bin with transfer weighting
     y_pred_train = np.argmax(clf.predict_proba(X), axis=1)
     
     calib_hists = []
     for k in range(n_tomo_bins):
-        hist_k = np.histogram(z_clean[y_pred_train == k], grid_edges)[0].astype(np.float64)
+        mask_k = (y_pred_train == k)
+        if sample_weights is not None:
+            w_k = sample_weights[mask_k]
+            hist_k = np.histogram(z_clean[mask_k], grid_edges, weights=w_k)[0].astype(np.float64)
+        else:
+            hist_k = np.histogram(z_clean[mask_k], grid_edges)[0].astype(np.float64)
         # Add Laplace smoothing to prevent log-loss divergence
         hist_k += 0.05
         hist_k /= hist_k.sum()
@@ -174,7 +237,7 @@ def predict_and_generate_submission(
     output_bhat_file: Union[str, Path],
     output_nz_samples_file: Optional[Union[str, Path]] = None,
 ) -> None:
-    """Predict tomographic bins on WFD catalog and construct qp Ensembles."""
+    """Predict tomographic bins on WFD catalog with Hybrid MoE entropy regularization and construct qp Ensembles."""
     taskset = key[0:9]
     tomo_edges = TOMO_BIN_EDGES[taskset]
     grid_edges = Z_BIN_EDGES[taskset]
@@ -185,6 +248,12 @@ def predict_and_generate_submission(
 
     X_wfd = extract_features(wfd_data)
     probs_wfd = clf.predict_proba(X_wfd)
+
+    # Hybrid MoE entropy regularization for high-uncertainty boundary objects
+    entropy = -np.sum(probs_wfd * np.log(np.maximum(probs_wfd, 1e-12)), axis=1)
+    uncertain = entropy > 1.25
+    probs_wfd[uncertain] = 0.88 * probs_wfd[uncertain] + 0.12 * (1.0 / n_tomo_bins)
+
     bin_assignments = np.argmax(probs_wfd, axis=1).astype(int)
 
     # Sequential IDs required by check_submission
@@ -206,19 +275,31 @@ def predict_and_generate_submission(
     Path(output_nz_estimate_file).parent.mkdir(parents=True, exist_ok=True)
     ens_estimate.write_to(output_nz_estimate_file)
 
-    # 3. Write nz_samples file (for Taskset 3 or if requested)
+    # 3. Write nz_samples file (for Taskset 3 or if requested) with correlated covariance
     if output_nz_samples_file is not None:
         n_realizations = 100
+        n_grid = len(grid_edges) - 1
+        z_mid = 0.5 * (grid_edges[:-1] + grid_edges[1:])
         
-        # Generate realizations using Dirichlet posterior sampling
+        # Spatial correlation kernel across redshift bins
+        dist_mat = cdist(z_mid[:, None], z_mid[:, None])
+        cov_mat = 0.04 * np.exp(-0.5 * (dist_mat / 0.15) ** 2) + 1e-6 * np.eye(n_grid)
+        gp_chol = np.linalg.cholesky(cov_mat)
+        
         rng = np.random.default_rng(42)
         realization_list = []
         for k in range(n_tomo_bins):
-            # Prior weights scaled by effective counts
             alpha = calib_hists[k] * 1000.0 + 0.1
-            samples_k = rng.dirichlet(alpha, size=n_realizations)
+            dirichlet_draws = rng.dirichlet(alpha, size=n_realizations)
+            
+            # Correlated Gaussian process mode modulation
+            gp_noise = rng.standard_normal(size=(n_realizations, n_grid))
+            gp_modes = gp_noise @ gp_chol.T
+            correlated_draws = dirichlet_draws * np.exp(gp_modes)
+            correlated_draws /= np.sum(correlated_draws, axis=1, keepdims=True)
+            
             for r in range(n_realizations):
-                realization_list.append(samples_k[r])
+                realization_list.append(correlated_draws[r])
                 
         realization_matrix = np.array(realization_list)
         ens_samples = qp.hist.create_ensemble(grid_edges, realization_matrix)
@@ -311,7 +392,7 @@ def run_taskset_1_training_and_estimation(
     output_bhat_file: Union[str, Path],
     output_nz_samples_file: Optional[Union[str, Path]] = None,
 ) -> None:
-    clf, calib_hists = train_pontifex_pipeline(ddf_files, key, models_dir)
+    clf, calib_hists = train_pontifex_pipeline(ddf_files, key, models_dir, wfd_file=wfd_file)
     predict_and_generate_submission(
         key,
         wfd_file,
@@ -332,7 +413,7 @@ def run_taskset_2_training_and_estimation(
     output_bhat_file: Union[str, Path],
     output_nz_samples_file: Optional[Union[str, Path]] = None,
 ) -> None:
-    clf, calib_hists = train_pontifex_pipeline(ddf_files, key, models_dir)
+    clf, calib_hists = train_pontifex_pipeline(ddf_files, key, models_dir, wfd_file=wfd_file)
     predict_and_generate_submission(
         key,
         wfd_file,
@@ -353,7 +434,7 @@ def run_taskset_3_training_and_estimation(
     output_bhat_file: Union[str, Path],
     output_nz_samples_file: Union[str, Path],
 ) -> None:
-    clf, calib_hists = train_pontifex_pipeline(ddf_files, key, models_dir)
+    clf, calib_hists = train_pontifex_pipeline(ddf_files, key, models_dir, wfd_file=wfd_file)
     predict_and_generate_submission(
         key,
         wfd_file,
