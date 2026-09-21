@@ -16,8 +16,8 @@ from .utils import TOMO_BIN_EDGES, Z_BIN_EDGES
 
 # Submission Metadata
 SUBMISSION_NAME: str = "pontifex"
-SUBMISSION_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/4.0.0/submit_pontifex.tgz"
-MODEL_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/4.0.0/submit_pontifex_models.tgz"
+SUBMISSION_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/4.1.0-bula/submit_pontifex.tgz"
+MODEL_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/4.1.0-bula/submit_pontifex_models.tgz"
 IMPORTS_OK: bool = True
 
 # Sequential ID offsets expected by submit_utils.check_submission
