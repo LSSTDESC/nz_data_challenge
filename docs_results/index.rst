@@ -30,6 +30,7 @@ using increasingly realistic data.  Here we present the results.
    :maxdepth: 2
    :caption: Results of individual submissions
 
-   results/rail_knn_4tasks/index
+   results/fzboost_naive/index
+   results/pontifex/index
 
 	     
