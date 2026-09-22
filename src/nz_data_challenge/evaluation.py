@@ -1028,6 +1028,91 @@ def evaluate_all_submissions(
     )
 
 
+def copy_file(input_path: str, output_path: str) -> None:
+    """
+    Copy a text file to an output file
+
+    Parameters:
+    -----------
+    input_path : str
+        Path to the input_path file
+    output_path : str
+        Path where the modified file will be saved
+
+    Returns:
+    --------
+    None
+    """
+    try:
+        # Read the template file
+        with open(input_path, "r", encoding="utf-8") as input_file:
+            content = input_file.read()
+
+        # Write to output file
+        with open(output_path, "w", encoding="utf-8") as output_file:
+            output_file.write(content)
+
+        print(f"Successfully created {output_path} from {input_path}\n")
+
+    except FileNotFoundError:
+        print(f"Warning: Input file '{input_path}' not found", file=sys.stderr)
+    except PermissionError:
+        print("Warning: Permission denied when accessing files", file=sys.stderr)
+    except Exception as e:
+        print(f"Warning: {str(e)}", file=sys.stderr)
+
+
+def setup_submission(
+    submission_name: str,
+    accepted_dir: str='accepted',
+) -> None:
+
+    try:
+        copy_file(
+            f"{accepted_dir}/requirements_{submission_name}.txt",
+            f"requirements_{submission_name}.txt",
+        )
+    except:
+        pass
+
+    try:
+        copy_file(
+            f"{accepted_dir}/test_{submission_name}.py",
+            f"tests/test_{submission_name}.py",
+        )
+    except:
+        pass
+
+
+def cleanup_submission(
+    submission_name: str,
+) -> None:
+
+    try:
+        os.unlink(f"requirements_{submission_name}.txt")
+    except:
+        pass
+
+    try:
+        os.unlink(f"tests/test_{submission_name}.py")
+    except:
+        pass
+
+
+def setup_submissions(
+    submissions: list[str],
+) -> None:
+    for submission in submissions:
+        setup_submission(submission)
+
+
+def cleanup_submissions(
+    submissions: list[str],
+) -> None:
+    for submission in submissions:
+        cleanup_submission(submission)
+
+
 def run_submission(
     submission_name: str, results_dir: str, *, force: bool = False
 ) -> None:
@@ -1065,7 +1150,7 @@ def run_submission(
 
     if not os.environ.get("SKIP_PYTEST"):
         output = subprocess.run(
-            ["py.test", f"tests/test_{submission_name}.py"],
+            ["py.test", "-k", "submit", f"tests/test_{submission_name}.py"],
             check=True,
             capture_output=True,
         )
@@ -1079,13 +1164,13 @@ def run_submission(
 def run_submissions(
     submissions: list[str] | None,
     results_top_dir: str,
-    accepeted_dir: str,
+    accepted_dir: str,
     *,
     force: bool = False,
 ) -> None:
 
     if submissions is None:
-        submissions = get_submissions(accepeted_dir)
+        submissions = get_submissions(accepted_dir)
 
     for submission in submissions:
         run_submission(submission, f"{results_top_dir}/{submission}", force=force)
