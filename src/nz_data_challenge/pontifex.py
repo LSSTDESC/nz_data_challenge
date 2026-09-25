@@ -16,8 +16,8 @@ from .utils import TOMO_BIN_EDGES, Z_BIN_EDGES
 
 # Submission Metadata
 SUBMISSION_NAME: str = "pontifex"
-SUBMISSION_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/4.1.0-bula/submit_pontifex.tgz"
-MODEL_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/4.1.0-bula/submit_pontifex_models.tgz"
+SUBMISSION_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/5.0.0-ascention/submit_pontifex.tgz"
+MODEL_URL: str = "https://github.com/mardom/nz_data_challenge/releases/download/5.0.0-ascention/submit_pontifex_models.tgz"
 IMPORTS_OK: bool = True
 
 # Sequential ID offsets expected by submit_utils.check_submission
@@ -191,6 +191,45 @@ def train_pontifex_pipeline(
         except Exception:
             sample_weights = None
 
+    # 1. Stratified 5-Fold Cross-Validation for Out-Of-Fold (OOF) Calibration
+    from sklearn.model_selection import StratifiedKFold
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    y_pred_oof = np.zeros(len(y_true), dtype=int)
+
+    for fold, (train_idx, val_idx) in enumerate(skf.split(X, y_true)):
+        sw_fold = sample_weights[train_idx] if sample_weights is not None else None
+        clf_fold = xgb.XGBClassifier(
+            n_estimators=180,
+            max_depth=6,
+            learning_rate=0.08,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            tree_method='hist',
+            device='cuda',
+            random_state=42 + fold,
+            eval_metric='mlogloss',
+        )
+        clf_fold.fit(X[train_idx], y_true[train_idx], sample_weight=sw_fold)
+        probs_val = clf_fold.predict_proba(X[val_idx])
+        y_pred_oof[val_idx] = np.argmax(probs_val, axis=1)
+
+    # 2. Reconstruct empirical n(z) for each bin using genuine OUT-OF-FOLD predictions
+    # This prevents in-sample memorization and models true adjacent-bin spillover
+    calib_hists = []
+    for k in range(n_tomo_bins):
+        mask_k = (y_pred_oof == k)
+        if sample_weights is not None:
+            w_k = sample_weights[mask_k]
+            hist_k = np.histogram(z_clean[mask_k], grid_edges, weights=w_k)[0].astype(np.float64)
+        else:
+            hist_k = np.histogram(z_clean[mask_k], grid_edges)[0].astype(np.float64)
+        # Add Laplace smoothing to prevent log-loss divergence
+        hist_k += 0.05
+        hist_k /= hist_k.sum()
+        calib_hists.append(hist_k)
+    calib_hists = np.array(calib_hists)
+
+    # 3. Train final production classifier on all training data
     clf = xgb.XGBClassifier(
         n_estimators=180,
         max_depth=6,
@@ -203,23 +242,6 @@ def train_pontifex_pipeline(
         eval_metric='mlogloss',
     )
     clf.fit(X, y_true, sample_weight=sample_weights)
-
-    # Reconstruct training empirical n(z) for each bin with transfer weighting
-    y_pred_train = np.argmax(clf.predict_proba(X), axis=1)
-    
-    calib_hists = []
-    for k in range(n_tomo_bins):
-        mask_k = (y_pred_train == k)
-        if sample_weights is not None:
-            w_k = sample_weights[mask_k]
-            hist_k = np.histogram(z_clean[mask_k], grid_edges, weights=w_k)[0].astype(np.float64)
-        else:
-            hist_k = np.histogram(z_clean[mask_k], grid_edges)[0].astype(np.float64)
-        # Add Laplace smoothing to prevent log-loss divergence
-        hist_k += 0.05
-        hist_k /= hist_k.sum()
-        calib_hists.append(hist_k)
-    calib_hists = np.array(calib_hists)
 
     os.makedirs(models_dir, exist_ok=True)
     model_path = Path(models_dir) / f"{key}_model.joblib"
