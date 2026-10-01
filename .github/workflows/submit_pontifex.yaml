@@ -5,7 +5,7 @@ name: Unit test and code coverage
 
 on:
   push:
-    branches: [main, 'submit/*', ascention]
+    branches: [main, 'submit/*', ascention, aionplus]
   pull_request:
     branches: [main]
 
