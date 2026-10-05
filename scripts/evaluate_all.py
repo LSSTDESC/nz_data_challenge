@@ -1,10 +1,20 @@
 
+import argparse
 import os
 from pathlib import Path
 
 from nz_data_challenge import evaluation
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Evaluate all accepted submissions.')
+    parser.add_argument(
+        '--forecast-backend',
+        choices=sorted(evaluation.FORECAST_BACKENDS),
+        default='fisherA2Z',
+        help='code for the Fisher forecast metrics (default: fisherA2Z)',
+    )
+    args = parser.parse_args()
 
     accepted_dir = 'accepted'
     submit_top_dir = 'submission'
@@ -26,5 +36,6 @@ if __name__ == '__main__':
         results_top_dir,
         template_jinja_file,
         suffix,
+        forecast_backend=args.forecast_backend,
     )
     evaluation.cleanup_submissions(submissions)

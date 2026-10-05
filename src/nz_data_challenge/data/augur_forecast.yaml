@@ -1,0 +1,135 @@
+# Fisher forecast settings for the Augur pathway (nz_data_challenge.forecast_augur).
+#
+# The analysis mirrors the defaults of fisherA2Z's FisherFlex used by forecast.py,
+# except for intrinsic alignments (see `systematics`).
+#
+# `augur` is a base Augur configuration.  For every forecast, forecast_augur fills in
+# the source sample (sources.nbins, ndens and Nz_kwargs.input_file), the statistics
+# with their tracer pairs and scale cuts, the sacc and Fisher output paths,
+# fisher.var_pars and fisher.derivative_steps; for cosmic shear alone it removes the
+# lens sample.  Relative paths are relative to this file.
+#
+# `analysis` holds what Augur has no place for: the lower cosmic-shear cut, the
+# lens-source pair selection, the priors (including Omega_m, which Augur cannot
+# combine with a Fisher bias) and the per-parameter derivative steps.
+
+augur:
+  general:
+    ignore_scale_cuts: false
+    ignore_scale_cuts_likelihood: false
+    # None evaluates the theory at the bin centres, as FisherFlex does; TopHat
+    # averages it over each bin.
+    bandpower_windows: None
+
+  cosmo:
+    Omega_c: 0.2666
+    Omega_b: 0.049
+    h: 0.6727
+    sigma8: 0.831
+    n_s: 0.9645
+    w0: -1.0
+    wa: 0.0
+    transfer_function: eisenstein_hu
+    matter_power_spectrum: halofit
+
+  ccl_accuracy:
+    gsl_params:
+      # FisherFlex switches this off globally; it changes the lensing kernel.
+      LENSING_KERNEL_SPLINE_INTEGRATION: false
+      # At the default 1e-4 the Limber integral of the narrow lens bins jumps by
+      # ~1e-3 (relative) under parameter steps of ~1e-3, enough to flip the sign
+      # of some finite-difference derivatives.
+      INTEGRATION_LIMBER_EPSREL: 1.0e-6
+
+  systematics:
+    # NLA intrinsic alignments, A(z) = ia_bias ((1 + z) / (1 + z_piv))^alphaz.
+    # FisherFlex weights the amplitude by a luminosity function instead,
+    # A0 <L^beta>(z) ((1 + z) / 1.62)^eta_l, which firecrown does not have; these
+    # values are a power-law fit to its amplitude over 0.1 < z < 1.5.
+    ia_bias: 0.82
+    alphaz: 4.33
+    z_piv: 0.62
+    # SRD Y10 linear galaxy bias
+    lens0_bias: 1.376695
+    lens1_bias: 1.451179
+    lens2_bias: 1.528404
+    lens3_bias: 1.607983
+    lens4_bias: 1.689579
+    lens5_bias: 1.772899
+    lens6_bias: 1.857700
+    lens7_bias: 1.943754
+    lens8_bias: 2.030887
+    lens9_bias: 2.118943
+
+  Firecrown_Factory:
+    TwoPointFactory:
+      correlation_space: harmonic
+      number_counts_factories:
+        - type_source: default
+          global_systematics: []
+          include_rsd: false
+          per_bin_systematics: []
+      weak_lensing_factories:
+        - type_source: default
+          global_systematics:
+            - {type: LinearAlignmentSystematicFactory, alphag: 1.0}
+          per_bin_systematics: []
+      cmb_factories: []
+      int_options: null
+
+  sources:
+    ellipticity_error: 0.26  # per component
+    Nz_type: ZDistFromFile
+    Nz_kwargs: {format: ascii}
+
+  lenses:
+    # LSST Y10 lens sample: 10 bins in 0.2-1.2, 48 arcmin^-2 in total.
+    nbins: 10
+    ndens: 48.0
+    Nz_type: ZDistFromFile
+    Nz_kwargs: {input_file: augur_lens_nz_lsst_y10.txt, format: ascii}
+
+  cov_options:
+    cov_type: tjpcov
+    fsky: 0.5
+    IA: 0.82  # constant IA amplitude TJPCov uses in the covariance
+
+  fisher:
+    derivative_method: numdifftools
+
+analysis:
+  # Multipole binning: 20 log-spaced bins between 20 and 15000.  Only the bins up
+  # to the largest scale cut are handed to Augur.
+  ell_edges: np.geomspace(20, 15000, 21)
+  # Cosmic shear uses ell_min <= ell <= ell_max.
+  cosmic_shear_ell_range: [300.0, 1800.0]
+  # Clustering and GGL use ell <= k_max chi(z_lens) h - 0.5 with k_max = 0.3 h/Mpc,
+  # chi at the lens bin centres below.
+  lens_z_eff: [0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95, 1.05, 1.15]
+  lens_ell_max: [210.6027, 287.2237, 359.4544, 427.4509, 491.4151,
+                 551.5762, 608.1761, 661.4586, 711.6619, 759.0139]
+  # GGL uses the lens-source pairs with <z>_source > lens_z_eff + ggl_z_offset.
+  ggl_z_offset: 0.3
+
+  # Varied parameters (lens biases are added when lenses are used).  Omega_c is
+  # traded for Omega_m at fixed Omega_b, the basis the priors are given in.
+  var_pars: [Omega_c, sigma8, n_s, w0, wa, Omega_b, h, ia_bias, alphaz]
+  # Gaussian prior widths, from Table 1 of arXiv:2507.01374.  The IA amplitude
+  # keeps FisherFlex's fractional width (2.5 / 5.92); `lens_bias` applies to
+  # every lensN_bias.
+  priors:
+    Omega_m: 0.15
+    sigma8: 0.2
+    n_s: 0.2
+    w0: 0.8
+    wa: 1.3
+    Omega_b: 0.003
+    h: 0.125
+    ia_bias: 0.3463
+    alphaz: 1.5
+    lens_bias: 0.9
+
+  # Numerical derivatives: central differences with a step of this fraction of
+  # each fiducial value, or of the scale below where the fiducial value is zero.
+  derivative_rel_step: 0.01
+  derivative_zero_fid_scale: {wa: 1.0}

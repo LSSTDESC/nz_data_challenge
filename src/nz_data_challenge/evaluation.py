@@ -6,6 +6,7 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,11 +15,17 @@ import pandas as pd
 import qp
 import tables_io
 import yaml
-from fisherA2Z.fisher_flex import FisherFlex, FisherFlexBias, FisherFlexResult
 from jinja2 import Template
 
-from . import metrics, utils, forecast
+from . import metrics, utils
 from .utils import TASKSETS, SIMS, SCENARIOS
+
+# The two forecast backends, fisherA2Z (forecast.py) and Augur
+# (forecast_augur.py), are imported where they are used, so this module needs
+# only the one that is run.
+if TYPE_CHECKING:
+    from fisherA2Z.fisher_flex import FisherFlexBias, FisherFlexResult
+    from .forecast_augur import AugurFisherBias, AugurFisherResult
 
 # Scale cuts for every Fisher forecast.  This must stay in step with the
 # identical dict inside forecast.fisher_forecast / forecast.fisher_bias_forecast:
@@ -222,7 +229,7 @@ def perfect_forecast(
     scenario: str,
     mode: str,  # '3x2pt' | '2x2pt' | 'cosmic_shear'
     truth_file: str,
-) -> FisherFlexResult:
+) -> "FisherFlexResult":
     """Fisher forecast for perfect tomography, from the truth catalog alone.
 
     Objects are placed in tomographic bins by their *true* redshift using the
@@ -254,6 +261,10 @@ def perfect_forecast(
     FisherFlexResult
         Fisher forecast result object from fisherA2Z.
     """
+    from fisherA2Z.fisher_flex import FisherFlex
+
+    from . import forecast
+
     truth = tables_io.read(truth_file)
     true_redshifts = truth["redshift"]
 
@@ -268,7 +279,7 @@ def perfect_forecast(
         n_tomo_bins,
     )
     counts = np.bincount(true_assignments, minlength=n_tomo_bins)
-    neff = forecast.tomo_bins_effective_density(counts, taskset, sim, scenario)
+    neff = utils.tomo_bins_effective_density(counts, taskset, sim, scenario)
 
     flex = FisherFlex(
         nz_source=nz_perfect,
@@ -284,12 +295,13 @@ def perfect_forecast(
 
 
 def evaluate_fisher_forecasts(
-    res_cs: FisherFlexResult,
-    bias_cs: FisherFlexBias,
-    res_3x2pt: FisherFlexResult,
-    bias_3x2pt: FisherFlexBias,
-    ref_cs: FisherFlexResult,
-    ref_3x2pt: FisherFlexResult,
+    res_cs: "FisherFlexResult | AugurFisherResult",
+    bias_cs: "FisherFlexBias | AugurFisherBias",
+    res_3x2pt: "FisherFlexResult | AugurFisherResult",
+    bias_3x2pt: "FisherFlexBias | AugurFisherBias",
+    ref_cs: "FisherFlexResult | AugurFisherResult",
+    ref_3x2pt: "FisherFlexResult | AugurFisherResult",
+    w_params: tuple[str, str] = ("w_0", "w_a"),
 ) -> dict[str, float]:
     """Reduce the Fisher forecasts to four single-number metrics.
 
@@ -302,11 +314,16 @@ def evaluate_fisher_forecasts(
     Parameters
     ----------
     res_cs, res_3x2pt
-        Forecasts using the submitted n(z) and bin assignments.
+        Forecasts using the submitted n(z) and bin assignments, from either
+        forecast backend.
     bias_cs, bias_3x2pt
         Parameter biases of those forecasts against the true n(z).
     ref_cs, ref_3x2pt
-        The corresponding :func:`perfect_forecast` references.
+        The corresponding :func:`perfect_forecast` (or
+        :func:`perfect_forecast_augur`) references.
+    w_params
+        Names of w0 and wa in the forecasts: ``('w_0', 'w_a')`` for fisherA2Z,
+        ``('w0', 'wa')`` for Augur.
 
     Returns
     -------
@@ -315,8 +332,8 @@ def evaluate_fisher_forecasts(
     """
     s8_err = res_cs.s8()[1]
     s8_err_perfect = ref_cs.s8()[1]
-    fom = res_3x2pt.fom("w_0", "w_a")
-    fom_perfect = ref_3x2pt.fom("w_0", "w_a")
+    fom = res_3x2pt.fom(*w_params)
+    fom_perfect = ref_3x2pt.fom(*w_params)
 
     the_dict: dict[str, float] = dict(
         # Perfect tomography is the best case, so both ratios should already be
@@ -325,7 +342,7 @@ def evaluate_fisher_forecasts(
         s8_precision_cs=float(min(s8_err_perfect / s8_err, 1.0)),
         s8_bias_cs=float(abs(bias_cs.s8()[3])),
         wowa_fom_ratio_3x2pt=float(min(fom / fom_perfect, 1.0)),
-        wowa_bias_3x2pt=float(bias_3x2pt.bias_2d("w_0", "w_a").n_sigma),
+        wowa_bias_3x2pt=float(bias_3x2pt.bias_2d(*w_params).n_sigma),
         # Unscored, so the ratios can be re-derived from the results file.
         s8_err_cs=float(s8_err),
         s8_err_cs_perfect=float(s8_err_perfect),
@@ -457,6 +474,7 @@ def evaluate_submission(
     truth_dir: str | Path,
     results_dir: str | Path,
     suffix: str = "wfd",
+    forecast_backend: str = "fisherA2Z",
 ) -> None:
     """Run full evaluation of a submission across all tasksets, sims, and scenarios.
 
@@ -475,7 +493,19 @@ def evaluate_submission(
         Path to the output directory for plots and results YAML.
     suffix
         File suffix identifier (default 'wfd').
+    forecast_backend
+        Code for the Fisher forecast metrics, a key of ``FORECAST_BACKENDS``:
+        'fisherA2Z' (FisherFlex, the default) or 'augur' (Augur, with firecrown
+        theory and TJPCov covariance).  Both write the same metrics and plot
+        files.
     """
+    if forecast_backend not in FORECAST_BACKENDS:
+        raise ValueError(
+            f"unknown forecast_backend {forecast_backend!r}; "
+            f"use one of {sorted(FORECAST_BACKENDS)}"
+        )
+    forecast_metrics = FORECAST_BACKENDS[forecast_backend]
+
     full_output: dict[str, dict[str, Any]] = {}
 
     Path(results_dir).mkdir(parents=True, exist_ok=True)
@@ -515,34 +545,8 @@ def evaluate_submission(
                 )
 
                 counts = np.squeeze(nz_estimates.ancil["n_objects"])
-                neff = forecast.tomo_bins_effective_density(
+                neff = utils.tomo_bins_effective_density(
                     counts, taskset, sim, scenario
-                )
-
-                res_cs, bias_res_cs = forecast.fisher_bias_forecast(
-                    nz_estimates,
-                    bhat_data,
-                    neff,
-                    mode="cosmic_shear",
-                    truth=truth,
-                )
-
-                res_3x2pt, bias_res_3x2pt = forecast.fisher_bias_forecast(
-                    nz_estimates,
-                    bhat_data,
-                    neff,
-                    mode="3x2pt",
-                    truth=truth,
-                )
-
-                # The reference the precision metrics are measured against.
-                # Depends only on the truth catalog, and is cached, so it is
-                # computed once and shared by every submission.
-                ref_cs = perfect_forecast(
-                    taskset, sim, scenario, "cosmic_shear", str(truth_file)
-                )
-                ref_3x2pt = perfect_forecast(
-                    taskset, sim, scenario, "3x2pt", str(truth_file)
                 )
 
                 full_output[key] = evaluate_bin_assignments(
@@ -557,17 +561,17 @@ def evaluate_submission(
                     )
                 )
                 full_output[key].update(
-                    wowa_fom_cs=float(res_cs.fom("w_0", "w_a")),
-                    wowa_fom_3x2pt=float(res_3x2pt.fom("w_0", "w_a")),
-                )
-                full_output[key].update(
-                    **evaluate_fisher_forecasts(
-                        res_cs,
-                        bias_res_cs,
-                        res_3x2pt,
-                        bias_res_3x2pt,
-                        ref_cs,
-                        ref_3x2pt,
+                    **forecast_metrics(
+                        nz_estimates,
+                        bhat_data,
+                        truth,
+                        neff,
+                        taskset,
+                        sim,
+                        scenario,
+                        str(truth_file),
+                        results_dir,
+                        key,
                     )
                 )
 
@@ -579,29 +583,257 @@ def evaluate_submission(
                     true_distributions, nz_distributions, grid_edges
                 )
 
-                corner_params = ["omega_m", "sigma_8", "w_0", "w_a"]
-
-                fig_cs = res_cs.corner(corner_params, color="C3", label="Cosmic Shear")
-                fig_cs.legend(loc="upper right", fontsize=10)
-                bias_res_cs.corner_arrows(
-                    corner_params, fig=fig_cs, shifted_contour=True, color="C1"
-                )
-
-                fig_3x2pt = res_3x2pt.corner(corner_params, color="C3", label="3x2pt")
-                fig_3x2pt.legend(loc="upper right", fontsize=10)
-                bias_res_3x2pt.corner_arrows(
-                    corner_params, fig=fig_3x2pt, shifted_contour=True, color="C1"
-                )
-
                 fig_confusion.savefig(f"{results_dir}/{key}_confusion_matrix.png")
                 fig_nz.savefig(f"{results_dir}/{key}_nz_distributions.png")
                 fig_mean_and_rms.savefig(f"{results_dir}/{key}_nz_mean_and_rms.png")
 
-                fig_cs.savefig(f"{results_dir}/{key}_forecast_cosmic_shear.png")
-                fig_3x2pt.savefig(f"{results_dir}/{key}_forecast_3x2pt.png")
-
     with open(f"{results_dir}/full_results.yaml", "w") as fout:
         yaml.dump(full_output, fout)
+
+
+def forecast_metrics_fisher_a2z(
+    nz_estimates: qp.Ensemble,
+    bhat_data: dict[str, np.ndarray],
+    truth: dict[str, np.ndarray],
+    neff: np.ndarray,
+    taskset: str,
+    sim: str,
+    scenario: str,
+    truth_file: str,
+    results_dir: str | Path,
+    key: str,
+) -> dict[str, float]:
+    """Fisher forecast metrics of one taskset/sim/scenario, with fisherA2Z.
+
+    Runs the cosmic-shear and 3x2pt forecasts of the submitted n(z), their
+    biases against the true n(z) and the perfect-tomography references, and
+    saves the corner plots to ``{results_dir}/{key}_forecast_{mode}.png``.
+
+    Parameters
+    ----------
+    nz_estimates
+        qp Ensemble of the submitted n(z), with 'n_objects' in its ancil table.
+    bhat_data
+        Submitted bin assignments, with a 'tomo_bin_index' column.
+    truth
+        Truth table, with a 'redshift' column.
+    neff
+        Effective number density per tomographic bin (arcmin^-2).
+    taskset, sim, scenario
+        Which data set this is.
+    truth_file
+        Path to the truth file, for the cached reference forecast.
+    results_dir, key
+        Where the plots go, and the prefix of their names.
+
+    Returns
+    -------
+    dict
+        'wowa_fom_cs', 'wowa_fom_3x2pt' and the metrics of
+        :func:`evaluate_fisher_forecasts`.
+    """
+    from . import forecast
+
+    res_cs, bias_res_cs = forecast.fisher_bias_forecast(
+        nz_estimates,
+        bhat_data,
+        neff,
+        mode="cosmic_shear",
+        truth=truth,
+    )
+
+    res_3x2pt, bias_res_3x2pt = forecast.fisher_bias_forecast(
+        nz_estimates,
+        bhat_data,
+        neff,
+        mode="3x2pt",
+        truth=truth,
+    )
+
+    # The reference the precision metrics are measured against.
+    # Depends only on the truth catalog, and is cached, so it is
+    # computed once and shared by every submission.
+    ref_cs = perfect_forecast(taskset, sim, scenario, "cosmic_shear", truth_file)
+    ref_3x2pt = perfect_forecast(taskset, sim, scenario, "3x2pt", truth_file)
+
+    the_dict: dict[str, float] = dict(
+        wowa_fom_cs=float(res_cs.fom("w_0", "w_a")),
+        wowa_fom_3x2pt=float(res_3x2pt.fom("w_0", "w_a")),
+    )
+    the_dict.update(
+        **evaluate_fisher_forecasts(
+            res_cs,
+            bias_res_cs,
+            res_3x2pt,
+            bias_res_3x2pt,
+            ref_cs,
+            ref_3x2pt,
+        )
+    )
+
+    corner_params = ["omega_m", "sigma_8", "w_0", "w_a"]
+
+    fig_cs = res_cs.corner(corner_params, color="C3", label="Cosmic Shear")
+    fig_cs.legend(loc="upper right", fontsize=10)
+    bias_res_cs.corner_arrows(
+        corner_params, fig=fig_cs, shifted_contour=True, color="C1"
+    )
+
+    fig_3x2pt = res_3x2pt.corner(corner_params, color="C3", label="3x2pt")
+    fig_3x2pt.legend(loc="upper right", fontsize=10)
+    bias_res_3x2pt.corner_arrows(
+        corner_params, fig=fig_3x2pt, shifted_contour=True, color="C1"
+    )
+
+    fig_cs.savefig(f"{results_dir}/{key}_forecast_cosmic_shear.png")
+    fig_3x2pt.savefig(f"{results_dir}/{key}_forecast_3x2pt.png")
+    return the_dict
+
+
+@lru_cache(maxsize=None)
+def perfect_forecast_augur(
+    taskset: str,
+    sim: str,
+    scenario: str,
+    mode: str,  # '3x2pt' | '2x2pt' | 'cosmic_shear'
+    truth_file: str,
+    output_dir: str,
+) -> "AugurFisherResult":
+    """Augur Fisher forecast for perfect tomography, from the truth catalog alone.
+
+    Augur counterpart of :func:`perfect_forecast`: objects are binned by their
+    true redshift with the challenge's fixed bin edges, each bin's n(z) is the
+    true-redshift histogram, and the n(z) is treated as exactly known.  Cached,
+    since it is the same for every submission of a given run.
+
+    Parameters
+    ----------
+    taskset
+        Name of the taskset, used to look up the tomographic bin edges.
+    sim
+        Name of the simulation ('cardinal' or 'flagship').
+    scenario
+        Name of the scenario ('1yr' or '4yr').
+    mode
+        Analysis mode: '3x2pt', '2x2pt', or 'cosmic_shear'.
+    truth_file
+        Path to the truth file, which must have a 'redshift' column.  Passed as
+        a string rather than the loaded table so the result can be cached.
+    output_dir
+        Directory for the Augur products.
+
+    Returns
+    -------
+    AugurFisherResult
+        Fisher forecast result object from :mod:`forecast_augur`.
+    """
+    from . import forecast_augur
+
+    truth = tables_io.read(truth_file)
+    true_redshifts = truth["redshift"]
+
+    tomo_bin_edges = utils.TOMO_BIN_EDGES[taskset]
+    n_tomo_bins = len(tomo_bin_edges) - 1
+
+    true_assignments = utils.get_true_bin_assignments(true_redshifts, tomo_bin_edges)
+    nz_perfect = utils.get_true_nz_distributions(
+        true_redshifts,
+        true_assignments,
+        forecast_augur.FORECAST_Z_EDGES,
+        n_tomo_bins,
+    )
+    counts = np.bincount(true_assignments, minlength=n_tomo_bins)
+    neff = utils.tomo_bins_effective_density(counts, taskset, sim, scenario)
+
+    res, _ = forecast_augur.augur_forecast(nz_perfect, neff, mode, output_dir)
+    return res
+
+
+def forecast_metrics_augur(
+    nz_estimates: qp.Ensemble,
+    bhat_data: dict[str, np.ndarray],
+    truth: dict[str, np.ndarray],
+    neff: np.ndarray,
+    taskset: str,
+    sim: str,
+    scenario: str,
+    truth_file: str,
+    results_dir: str | Path,
+    key: str,
+) -> dict[str, float]:
+    """Fisher forecast metrics of one taskset/sim/scenario, with Augur.
+
+    Same metrics and plot files as :func:`forecast_metrics_fisher_a2z`, from
+    :mod:`forecast_augur`.  The Augur products go to
+    ``{results_dir}/augur/{key}/{mode}``, and the perfect-tomography references,
+    which do not depend on the submission, to ``augur_reference/{key}/{mode}``
+    next to ``results_dir``, where every submission of a run shares them.  The
+    corner plots are drawn with fisherA2Z's plotting, exactly as for that
+    backend.
+
+    Parameters
+    ----------
+    See :func:`forecast_metrics_fisher_a2z`.
+
+    Returns
+    -------
+    dict
+        'wowa_fom_cs', 'wowa_fom_3x2pt' and the metrics of
+        :func:`evaluate_fisher_forecasts`.
+    """
+    from . import forecast_augur
+
+    corner_params = ["Omega_m", "sigma8", "w0", "wa"]
+    reference_dir = Path(results_dir).parent / "augur_reference" / key
+
+    res = {}
+    bias = {}
+    ref = {}
+    for mode in ["cosmic_shear", "3x2pt"]:
+        res[mode], bias[mode] = forecast_augur.fisher_bias_forecast(
+            nz_estimates,
+            bhat_data,
+            neff,
+            mode=mode,
+            truth=truth,
+            output_dir=Path(results_dir) / "augur" / key / mode,
+        )
+        ref[mode] = perfect_forecast_augur(
+            taskset, sim, scenario, mode, truth_file, str(reference_dir / mode)
+        )
+
+    the_dict: dict[str, float] = dict(
+        wowa_fom_cs=float(res["cosmic_shear"].fom("w0", "wa")),
+        wowa_fom_3x2pt=float(res["3x2pt"].fom("w0", "wa")),
+    )
+    the_dict.update(
+        **evaluate_fisher_forecasts(
+            res["cosmic_shear"],
+            bias["cosmic_shear"],
+            res["3x2pt"],
+            bias["3x2pt"],
+            ref["cosmic_shear"],
+            ref["3x2pt"],
+            w_params=("w0", "wa"),
+        )
+    )
+
+    for mode, label in zip(["cosmic_shear", "3x2pt"], ["Cosmic Shear", "3x2pt"]):
+        flex_res, flex_bias = forecast_augur.as_fisher_flex(res[mode], bias[mode])
+        fig = flex_res.corner(corner_params, color="C3", label=label)
+        fig.legend(loc="upper right", fontsize=10)
+        flex_bias.corner_arrows(
+            corner_params, fig=fig, shifted_contour=True, color="C1"
+        )
+        fig.savefig(f"{results_dir}/{key}_forecast_{mode}.png")
+    return the_dict
+
+
+# Forecast backends for evaluate_submission
+FORECAST_BACKENDS = dict(
+    fisherA2Z=forecast_metrics_fisher_a2z,
+    augur=forecast_metrics_augur,
+)
 
 
 def summarize_submissions(
@@ -997,6 +1229,7 @@ def evaluate_all_submissions(
     results_top_dir: str | Path,
     template_jinja_file: str | Path,
     suffix: str = "wfd",
+    forecast_backend: str = "fisherA2Z",
 ) -> None:
 
     Path(submit_top_dir).mkdir(parents=True, exist_ok=True)
@@ -1014,6 +1247,7 @@ def evaluate_all_submissions(
             truth_dir,
             results_dir,
             suffix=suffix,
+            forecast_backend=forecast_backend,
         )
 
     summarize_submissions(
