@@ -55,6 +55,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "src/nz_data_challenge/_version.py"
+fallback_version = "5.0.0"
+tag_regex = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+)*)"
 
 [tool.pytest.ini_options]
 testpaths = [

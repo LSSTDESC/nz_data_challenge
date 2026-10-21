@@ -1,0 +1,6 @@
+xgboost
+scikit-learn
+scipy
+qp-prob>=1.0.0
+tables_io[full]
+minisom
