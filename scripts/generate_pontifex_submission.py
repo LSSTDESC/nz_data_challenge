@@ -102,11 +102,22 @@ def generate_all():
             print(f"Completed {key} in {time.time() - t0:.1f}s")
 
     print(f"\nAll files generated in {time.time() - start_time:.1f}s!")
-    
+
+    import shutil
+    for dst_sub, dst_mod in [("submission/aionplus", "models/aionplus")]:
+        if os.path.exists(dst_sub):
+            shutil.rmtree(dst_sub)
+        if os.path.exists(dst_mod):
+            shutil.rmtree(dst_mod)
+        shutil.copytree(SUBMIT_DIR, dst_sub)
+        shutil.copytree(MODELS_DIR, dst_mod)
+
     print("\n--- Validating Full Submission via submit_utils.check_submission ---")
     submit_utils.check_submission(SUBMIT_DIR, tasksets=["taskset_1", "taskset_2", "taskset_3"])
-    print("\n>>> ALL VALIDATION CHECKS PASSED FOR TASKSETS 1, 2, AND 3! <<<\n")
+    submit_utils.check_submission("submission/aionplus", tasksets=["taskset_1", "taskset_2", "taskset_3"])
+    print("\n>>> ALL VALIDATION CHECKS PASSED FOR TASKSETS 1, 2, AND 3 (pontifex & aionplus)! <<<\n")
 
 
 if __name__ == "__main__":
     generate_all()
+
